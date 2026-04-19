@@ -1,7 +1,7 @@
 # Otso Mobile
 
 <p align="center">
-  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png" alt="Otso" width="72">
+  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png" alt="Otso" width="72">
 </p>
 
 <p align="center">
