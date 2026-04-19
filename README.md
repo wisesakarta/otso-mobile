@@ -1,11 +1,11 @@
 # Otso Mobile
 
 <p align="center">
-  <img src="app/src/main/res/drawable/ic_otso_light.png" alt="Otso" width="72">
+  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png" alt="Otso" width="72">
 </p>
 
 <p align="center">
-  <strong>v1.0.0-rc.1</strong>
+  <strong>v1.0.0-rc.2</strong>
 </p>
 
 **Otso** is a high-fidelity Android text editor focused on speed, stability, and craftsmanship — the mobile counterpart to [Otso Desktop](https://github.com/wisesakarta/solum).
@@ -50,10 +50,10 @@ Release APK:
 
 ## Release Channel
 Mobile release tags follow: `mobile/v*`
-Current release: `mobile/v1.0.0-rc.1`
+Current release: `mobile/v1.0.0-rc.2`
 Release assets:
-- `Otso-mobile-v1.0.0-rc.1-arm64.apk`
-- `Otso-mobile-v1.0.0-rc.1-x86_64.apk`
+- `Otso-mobile-v1.0.0-rc.2-arm64.apk`
+- `Otso-mobile-v1.0.0-rc.2-x86_64.apk`
 
 ---
 

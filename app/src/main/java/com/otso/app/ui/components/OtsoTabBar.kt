@@ -35,7 +35,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.ImeAction
 import com.otso.app.R
@@ -59,7 +58,6 @@ fun OtsoTabBar(
     var dragAccumulator by remember { mutableFloatStateOf(0f) }
     var isMenuPressed by remember { mutableStateOf(false) } 
     val otsoColors = MaterialTheme.colorScheme.otsoColors
-    val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     val activeTab = uiState.tabs.getOrNull(uiState.activeIndex)
 
@@ -134,12 +132,6 @@ fun OtsoTabBar(
                     animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
                     label = "rename_slide"
                 )
-                val renameAlpha by animateFloatAsState(
-                    targetValue = if (isEditing) 1f else 0f,
-                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                    label = "rename_alpha"
-                )
-
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -150,8 +142,8 @@ fun OtsoTabBar(
                                     blurRadius, blurRadius, android.graphics.Shader.TileMode.CLAMP
                                 ).asComposeRenderEffect()
                             } else null
-                            translationY = renameSlide.toPx()
-                            alpha = renameAlpha
+                            translationY = if (isEditing) renameSlide.toPx() else 0f
+                            alpha = 1f
                         },
                     contentAlignment = Alignment.CenterStart
                 ) {
@@ -202,10 +194,7 @@ fun OtsoTabBar(
                                 otsoColors.ink.copy(alpha = 0.65f), // slightly muted = clean
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.graphicsLayer {
-                                // Reverse the blur for the exiting text
-                                alpha = 1f - renameAlpha
-                            }
+                            modifier = Modifier
                         )
                     }
                 }
@@ -261,7 +250,6 @@ private fun AnimatedMenuIcon(
     // Using simple mapping for perfect coupling.
     val rotationTop = progress * 45f
     val rotationBottom = progress * -45f
-    val morphOffsetPx = progress * 5.dp.value * 2.5f // Scaled to look right
     val alphaMid = 1f - progress
     val scaleMid = 1f - progress
 
