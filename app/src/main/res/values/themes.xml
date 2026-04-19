@@ -1,0 +1,5 @@
+<resources>
+    <style name="Theme.Otso" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+    </style>
+</resources>

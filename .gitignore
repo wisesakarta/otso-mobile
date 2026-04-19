@@ -1,0 +1,27 @@
+# Build outputs
+*.iml
+.gradle/
+local.properties
+.idea/
+.DS_Store
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Release artifacts
+*.apk
+*.aab
+*.exe
+
+# Logs & temp
+*.log
+hs_err_pid*
+replay_pid*
+
+# Screenshots & temp media (di luar res/)
+screenshot_*.png
+*.tmp
+
+# Agent workspace
+.agent/
