@@ -1,7 +1,7 @@
 # Otso Mobile
 
 <p align="center">
-  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="Otso" width="72">
+  <img src="app/src/main/res/drawable/ic_otso_light.png" alt="Otso" width="72">
 </p>
 
 <p align="center">
@@ -72,7 +72,7 @@ app/src/main/java/com/otso/app/
 ---
 
 ## Desktop Counterpart
-Otso Desktop (Win32, C++17): [github.com/wisesakarta/solum](https://github.com/wisesakarta/solum)
+Otso Desktop (Win32, C++17): [github.com/wisesakarta/otso.git](https://github.com/wisesakarta/otso.git)
 
 ---
 
