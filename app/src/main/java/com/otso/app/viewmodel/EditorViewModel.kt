@@ -11,6 +11,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.otso.app.core.FileIO
 import com.otso.app.core.FontManager
+import com.otso.app.core.OcrEngine
 import com.otso.app.core.OtsoPreferences
 import com.otso.app.core.SessionIO
 import com.otso.app.core.TextCodec
@@ -50,6 +51,8 @@ data class EditorUiState(
     val customFontPath: String? = null,
     val customFontName: String? = null,
     val fileAccessError: String? = null,
+    val isOcrProcessing: Boolean = false,
+    val ocrEngineLabel: String = "",
 )
 
 class EditorViewModel(
@@ -183,6 +186,66 @@ class EditorViewModel(
                 _uiState.update {
                     it.copy(fileAccessError = "Cannot access file. Permission may have been revoked.")
                 }
+            }
+        }
+    }
+
+    fun importImageAsText(uri: Uri) {
+        importScannedUris(listOf(uri))
+    }
+
+    fun importScannedText(uri: Uri) {
+        // Surgical: Reuse existing robust pipeline
+        importScannedUris(listOf(uri))
+    }
+
+    fun importScannedUris(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        
+        viewModelScope.launch {
+            _uiState.update { it.copy(isOcrProcessing = true, ocrEngineLabel = "") }
+            try {
+                val combinedText = StringBuilder()
+                var lastEngine = ""
+                
+                for (uri in uris) {
+                    val output = withContext(Dispatchers.IO) {
+                        OcrEngine.extract(getApplication(), uri)
+                    }
+                    if (output.text.isNotBlank()) {
+                        if (combinedText.isNotEmpty()) combinedText.append("\n\n")
+                        combinedText.append(output.text.trim())
+                    }
+                    lastEngine = output.engineUsed
+                }
+
+                val textToInsert = combinedText.toString()
+                if (textToInsert.isBlank()) {
+                    _uiState.update {
+                        it.copy(fileAccessError = "No text detected from scan.", ocrEngineLabel = lastEngine)
+                    }
+                    return@launch
+                }
+
+                val active = activeTab
+                val current = getTextFieldValue(active.id)
+                
+                // Smart newline prefix if current line isn't empty
+                val insert = buildString {
+                    if (current.text.isNotEmpty() && current.selection.start > 0 && current.text[current.selection.start - 1] != '\n') {
+                        append('\n')
+                    }
+                    append(textToInsert)
+                }
+                
+                insertTextAtCursor(active.id, insert)
+                _uiState.update { it.copy(ocrEngineLabel = lastEngine) }
+            } catch (_: Exception) {
+                _uiState.update {
+                    it.copy(fileAccessError = "Failed to process scan.")
+                }
+            } finally {
+                _uiState.update { it.copy(isOcrProcessing = false) }
             }
         }
     }

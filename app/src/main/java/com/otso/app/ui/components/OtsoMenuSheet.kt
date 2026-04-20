@@ -29,6 +29,7 @@ fun OtsoMenuSheet(
     fontSizeSp: Int,
     onNewTab: () -> Unit,
     onOpenFile: () -> Unit,
+    onImportImage: () -> Unit,
     onSave: () -> Unit,
     onSaveAs: () -> Unit,
     onThemeModeChange: (String) -> Unit,
@@ -52,11 +53,12 @@ fun OtsoMenuSheet(
         // Group 1 — File actions:
         StaggeredItem(index = 0) { MenuItem("New Tab") { onNewTab(); onDismiss() } }
         StaggeredItem(index = 1) { MenuItem("Open File") { onOpenFile(); onDismiss() } }
-        StaggeredItem(index = 2) { MenuItem("Save") { onSave(); onDismiss() } }
-        StaggeredItem(index = 3) { MenuItem("Save As") { onSaveAs(); onDismiss() } }
+        StaggeredItem(index = 2) { MenuItem("Import Image (OCR)") { onImportImage(); onDismiss() } }
+        StaggeredItem(index = 3) { MenuItem("Save") { onSave(); onDismiss() } }
+        StaggeredItem(index = 4) { MenuItem("Save As") { onSaveAs(); onDismiss() } }
 
         Spacer(modifier = Modifier.height(8.dp))
-        StaggeredItem(index = 4) {
+        StaggeredItem(index = 5) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -68,7 +70,7 @@ fun OtsoMenuSheet(
 
         // Group 2 — Settings:
         // Theme Row with Sliding Selector
-        StaggeredItem(index = 5) {
+        StaggeredItem(index = 6) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -93,7 +95,7 @@ fun OtsoMenuSheet(
         }
 
         // Font Row
-        StaggeredItem(index = 6) {
+        StaggeredItem(index = 7) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -129,7 +131,7 @@ fun OtsoMenuSheet(
         }
 
         // Font Precision — Custom Injection Module
-        StaggeredItem(index = 7) {
+        StaggeredItem(index = 8) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -203,7 +205,7 @@ fun OtsoMenuSheet(
             }
         }
 
-        StaggeredItem(index = 8) {
+        StaggeredItem(index = 9) {
             MenuItem("About Otso") {
                 onAboutClick()
                 onDismiss()

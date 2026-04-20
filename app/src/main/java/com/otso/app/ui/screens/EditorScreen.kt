@@ -2,6 +2,7 @@ package com.otso.app.ui.screens
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
@@ -18,14 +19,22 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.border
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.navigation.NavController
+import androidx.activity.result.IntentSenderRequest
+import androidx.compose.ui.platform.LocalContext
+import android.app.Activity.RESULT_OK
+import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import kotlinx.coroutines.delay
 import com.otso.app.ui.components.OtsoEditor
 import com.otso.app.ui.components.OtsoFindBar
 import com.otso.app.ui.components.OtsoKeyboardToolbar
 import com.otso.app.ui.components.OtsoUnsavedDialog
 import com.otso.app.ui.components.OtsoMenuSheet
-
+import com.otso.app.ui.components.OtsoAsteriskLoader
 import com.otso.app.ui.components.OtsoTabBar
 import com.otso.app.ui.components.OtsoTabSwitcherSheet
 import com.otso.app.ui.theme.OtsoColors
@@ -49,6 +58,25 @@ fun EditorScreen(
     ) { uri ->
         if (uri != null) {
             viewModel.handleFileOpened(uri)
+        }
+    }
+    val imageOcrLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri ->
+        if (uri != null) {
+            viewModel.importImageAsText(uri)
+        }
+    }
+
+    val context = LocalContext.current
+    val scannerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val scanResult = GmsDocumentScanningResult.fromActivityResultIntent(result.data)
+            scanResult?.pages?.firstOrNull()?.imageUri?.let { scannedUri: Uri ->
+                viewModel.importScannedText(scannedUri)
+            }
         }
     }
 
@@ -154,6 +182,19 @@ fun EditorScreen(
                             activeTab?.let { tab -> viewModel.insertTextAtCursor(tab.id, insert) }
                         },
                         onFindClick = { viewModel.toggleFind() },
+                        onScanClick = {
+                            val options = GmsDocumentScannerOptions.Builder()
+                                .setGalleryImportAllowed(false)
+                                .setResultFormats(GmsDocumentScannerOptions.RESULT_FORMAT_JPEG)
+                                .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
+                                .build()
+
+                            val scanner = GmsDocumentScanning.getClient(options)
+                            scanner.getStartScanIntent(context as android.app.Activity)
+                                .addOnSuccessListener { intentSender ->
+                                    scannerLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
+                                }
+                        }
                     )
                 }
             }
@@ -189,6 +230,31 @@ fun EditorScreen(
                     style = OtsoTypography.uiCaption,
                     color = OtsoColors.Accent,
                 )
+            }
+        }
+
+        if (uiState.isOcrProcessing) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.otsoColors.background.copy(alpha = 0.72f))
+                    .semantics { contentDescription = "OCR processing overlay" },
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.otsoColors.surface)
+                        .padding(horizontal = 24.dp, vertical = 18.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    OtsoAsteriskLoader()
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Processing image...",
+                        style = OtsoTypography.uiLabelMedium,
+                        color = MaterialTheme.colorScheme.otsoColors.ink,
+                    )
+                }
             }
         }
     }
@@ -258,6 +324,9 @@ fun EditorScreen(
                 },
                 onOpenFile = {
                     openDocumentLauncher.launch(arrayOf("text/*"))
+                },
+                onImportImage = {
+                    imageOcrLauncher.launch("image/*")
                 },
                 onSave = {
                     viewModel.saveActiveTab()

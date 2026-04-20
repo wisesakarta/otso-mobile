@@ -56,12 +56,13 @@ fun OtsoTabSwitcherSheet(
                     color = otsoColors.muted.copy(alpha = 0.4f),
                     modifier = Modifier.weight(1f),
                 )
-                // Tombol new tab tetap ada
+                // Standardized Interaction Column (Interaction Center alignment)
                 Box(
                     modifier = Modifier
                         .size(40.dp)
+                        .padding(end = 4.dp) // Optical center correction
                         .otsoClickable(onClick = onNewTab),
-                    contentAlignment = Alignment.CenterEnd,
+                    contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = OtsoIcons.Plus,
@@ -129,10 +130,12 @@ fun OtsoTabSwitcherSheet(
                             )
                         }
 
+                        // Standardized Interaction Column (Interaction Center alignment)
                         if (isActive) {
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)
+                                    .padding(end = 4.dp) // Optical center correction
                                     .otsoClickable { onCloseTab(index) },
                                 contentAlignment = Alignment.Center
                             ) {
