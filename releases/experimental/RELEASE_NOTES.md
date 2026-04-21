@@ -14,9 +14,11 @@ Version (internal app): 1.0.0-rc.2 (versionCode 2)
 - Deep workspace scan mapping update.
 
 ## APK Artifacts (new build 2026-04-21)
-- app-arm64-v8a-release.apk
-- app-x86_64-release.apk
 - Otso-mobile-v1.0.0-rc.3-exp-scanocr-arm64.apk
 - Otso-mobile-v1.0.0-rc.3-exp-scanocr-x86_64.apk
+
+Distribution policy:
+- APK binaries are published via GitHub Releases assets.
+- APK binaries are not stored in the source tree.
 
 Note: ABI splits are enabled, so release outputs are split per architecture.
