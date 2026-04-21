@@ -25,7 +25,7 @@ class OcrHardTest {
             ?.sorted()
             .orEmpty()
 
-        assertTrue("No OCR test images found in assets/ocrTesting", imageNames.isNotEmpty())
+        assumeTrue("No OCR test images found in assets/ocrTesting", imageNames.isNotEmpty())
 
         val gtNames = assets.list("ocrTesting")
             ?.filter { it.endsWith(".gt.txt", ignoreCase = true) }

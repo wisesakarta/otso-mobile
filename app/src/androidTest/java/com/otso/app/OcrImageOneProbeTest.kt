@@ -7,6 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.otso.app.core.OcrEngine
 import kotlinx.coroutines.runBlocking
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -21,6 +22,9 @@ class OcrImageOneProbeTest {
 
         val imageName = "imageOne.jpg"
         val gtName = "imageOne.gt.txt"
+        val available = assets.list("ocrTesting").orEmpty().toSet()
+        assumeTrue("Internal OCR dataset missing: assets/ocrTesting/$imageName", imageName in available)
+        assumeTrue("Internal OCR dataset missing: assets/ocrTesting/$gtName", gtName in available)
         val workDir = File(context.cacheDir, "ocr-probe").apply { mkdirs() }
         val imageFile = File(workDir, imageName)
 
