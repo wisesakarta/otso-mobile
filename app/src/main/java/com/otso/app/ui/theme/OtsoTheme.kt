@@ -35,7 +35,6 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.graphics.Path
 import java.io.File
 import android.graphics.Typeface as AndroidTypeface
 import com.otso.app.R
@@ -103,6 +102,10 @@ val GeneralSans = FontFamily(
     Font(R.font.general_sans_semibold, FontWeight.SemiBold, FontStyle.Normal),
     Font(R.font.general_sans_bold,     FontWeight.Bold,     FontStyle.Normal),
     Font(R.font.general_sans_light,    FontWeight.Light,    FontStyle.Normal),
+)
+
+val JetBrainsMono = FontFamily(
+    Font(R.font.jetbrains_mono_regular, FontWeight.Normal, FontStyle.Normal),
 )
 
 data class OtsoTypographyTokens(

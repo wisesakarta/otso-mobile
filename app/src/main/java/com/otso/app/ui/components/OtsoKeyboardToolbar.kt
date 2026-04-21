@@ -27,6 +27,9 @@ import com.otso.app.ui.theme.OtsoSquircleShape
 fun OtsoKeyboardToolbar(
     onKeyInsert: (String) -> Unit,
     onFindClick: () -> Unit,
+    onScanClick: () -> Unit,
+    onMonoToggle: () -> Unit,
+    isMonospace: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme.otsoColors
@@ -61,6 +64,56 @@ fun OtsoKeyboardToolbar(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             val haptic = LocalHapticFeedback.current
+            
+            // Scan Button — Surgical Entry
+            Box(
+                modifier = Modifier
+                    .size(26.dp)
+                    .background(
+                        color = colors.edge.copy(alpha = 0.08f),
+                        shape = OtsoSquircleShape(smoothing = 0.8f),
+                    )
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() },
+                    ) {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onScanClick()
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                androidx.compose.material3.Icon(
+                    imageVector = OtsoIcons.Camera,
+                    contentDescription = "Scan",
+                    modifier = Modifier.size(14.dp),
+                    tint = colors.ink.copy(alpha = 0.65f),
+                )
+            }
+
+            // Monospace Toggle — Industrial ASCII Mode
+            Box(
+                modifier = Modifier
+                    .size(26.dp)
+                    .background(
+                        color = if (isMonospace) colors.accent.copy(alpha = 0.12f) else colors.edge.copy(alpha = 0.08f),
+                        shape = OtsoSquircleShape(smoothing = 0.8f),
+                    )
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() },
+                    ) {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onMonoToggle()
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "M",
+                    style = OtsoTypography.uiLabelMedium.copy(fontSize = 10.sp),
+                    color = if (isMonospace) colors.accent else colors.ink.copy(alpha = 0.65f),
+                )
+            }
+
             val keys = listOf("tab" to "\t", "( )" to "()", "[ ]" to "[]", "\" \"" to "\"\"", "/" to "/")
 
             keys.forEach { (label, insert) ->

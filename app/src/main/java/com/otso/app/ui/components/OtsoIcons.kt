@@ -173,4 +173,33 @@ object OtsoIcons {
             moveTo(56f, 128f)
             lineTo(200f, 128f)
         }.build()
+
+    val Camera: ImageVector
+        get() = ImageVector.Builder(
+            name = "OtsoIcons.Camera",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 256f,
+            viewportHeight = 256f
+        ).path(
+            fill = null,
+            stroke = SolidColor(Color.Black),
+            strokeLineWidth = 18f,
+            strokeLineCap = StrokeCap.Butt,
+            strokeLineJoin = StrokeJoin.Round
+        ) {
+            moveTo(24f, 80f)
+            lineTo(232f, 80f)
+            lineTo(232f, 208f)
+            lineTo(24f, 208f)
+            close()
+            moveTo(80f, 80f)
+            lineTo(96f, 48f)
+            lineTo(160f, 48f)
+            lineTo(176f, 80f)
+            moveTo(128f, 172f)
+            arcTo(36f, 36f, 1f, isMoreThanHalf = true, isPositiveArc = false, 128f, 100f)
+            arcTo(36f, 36f, 1f, isMoreThanHalf = true, isPositiveArc = false, 128f, 172f)
+        }.build()
+
 }

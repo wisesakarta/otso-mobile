@@ -96,30 +96,27 @@ fun AboutScreen(
 
             // The Craftsman Credit
             Text(
-                text = "Crafted with discipline by wisesakarta\n(Technical Standard)",
+                text = "Crafted with discipline by wisesakarta",
                 style = otsoTypography.uiLabelMedium,
                 color = otsoColors.muted,
                 lineHeight = 20.sp
             )
+            
+            Spacer(modifier = Modifier.weight(1f))
+
+            // 3. Developer Signature (Natural Integration)
+            Text(
+                text = "Technical Standard",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                style = otsoTypography.uiTechnical.copy(
+                    fontSize = 12.sp
+                ),
+                color = otsoColors.ink.copy(alpha = 0.4f)
+            )
         }
 
-        // 3. Developer Signature & Engine (Bottom Anchor)
-        Column(
-            modifier = Modifier
-                .padding(otsoSpacing.editorialMargin)
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = "Engine: Jetpack Compose",
-                style = otsoTypography.uiTechnical,
-                color = otsoColors.ink
-            )
-            Text(
-                text = "Architecture: Prometheus",
-                style = otsoTypography.uiTechnical,
-                color = otsoColors.ink
-            )
-        }
     }
 }

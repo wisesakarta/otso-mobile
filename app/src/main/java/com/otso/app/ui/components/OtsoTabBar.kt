@@ -129,7 +129,7 @@ fun OtsoTabBar(
                 )
                 val renameSlide by animateDpAsState(
                     targetValue = if (isEditing) 0.dp else 4.dp,
-                    animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
                     label = "rename_slide"
                 )
                 Box(

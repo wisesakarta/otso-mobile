@@ -11,6 +11,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.otso.app.core.FileIO
 import com.otso.app.core.FontManager
+import com.otso.app.core.IntelligenceEngine
+import com.otso.app.core.OcrEngine
 import com.otso.app.core.OtsoPreferences
 import com.otso.app.core.SessionIO
 import com.otso.app.core.TextCodec
@@ -50,6 +52,9 @@ data class EditorUiState(
     val customFontPath: String? = null,
     val customFontName: String? = null,
     val fileAccessError: String? = null,
+    val isOcrProcessing: Boolean = false,
+    val ocrEngineLabel: String = "",
+    val isMonospace: Boolean = false,
 )
 
 class EditorViewModel(
@@ -183,6 +188,80 @@ class EditorViewModel(
                 _uiState.update {
                     it.copy(fileAccessError = "Cannot access file. Permission may have been revoked.")
                 }
+            }
+        }
+    }
+
+    fun importImageAsText(uri: Uri) {
+        importScannedUris(listOf(uri))
+    }
+
+    fun importScannedText(uri: Uri) {
+        // Surgical: Reuse existing robust pipeline
+        importScannedUris(listOf(uri))
+    }
+
+    fun importScannedUris(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        
+        viewModelScope.launch {
+            _uiState.update { it.copy(isOcrProcessing = true, ocrEngineLabel = "") }
+            try {
+                val combinedText = StringBuilder()
+                var lastEngine = ""
+                
+                for (uri in uris) {
+                    val output = withContext(Dispatchers.IO) {
+                        OcrEngine.extract(getApplication(), uri)
+                    }
+                    if (output.text.isNotBlank()) {
+                        if (combinedText.isNotEmpty()) combinedText.append("\n\n")
+                        combinedText.append(output.text.trim())
+                    }
+                    lastEngine = output.engineUsed
+                }
+
+                val rawText = combinedText.toString()
+                if (rawText.isBlank()) {
+                    _uiState.update {
+                        it.copy(fileAccessError = "No text detected from scan.", ocrEngineLabel = lastEngine)
+                    }
+                    return@launch
+                }
+
+                // DNA: Intelligence Layer (Auto-formatting & Entity Extraction)
+                val textToInsert = withContext(Dispatchers.Default) {
+                    IntelligenceEngine.extractAndFormat(getApplication(), rawText)
+                }
+
+                _uiState.update { state -> 
+                    // Auto-enable monospace if text looks structured (many spaces in rows)
+                    val isStructured = textToInsert.lines().any { it.count { c -> c == ' ' } > 3 }
+                    state.copy(
+                        isMonospace = state.isMonospace || isStructured,
+                        ocrEngineLabel = "$lastEngine + Intel"
+                    )
+                }
+
+                val active = activeTab
+                val current = getTextFieldValue(active.id)
+                
+                // Smart newline prefix if current line isn't empty
+                val insert = buildString {
+                    if (current.text.isNotEmpty() && current.selection.start > 0 && current.text[current.selection.start - 1] != '\n') {
+                        append('\n')
+                    }
+                    append(textToInsert)
+                }
+                
+                insertTextAtCursor(active.id, insert)
+                _uiState.update { it.copy(ocrEngineLabel = "$lastEngine + Intel") }
+            } catch (_: Exception) {
+                _uiState.update {
+                    it.copy(fileAccessError = "Failed to process scan.")
+                }
+            } finally {
+                _uiState.update { it.copy(isOcrProcessing = false) }
             }
         }
     }
@@ -432,6 +511,10 @@ class EditorViewModel(
 
     fun toggleFind() {
         _uiState.update { it.copy(isFindOpen = !it.isFindOpen) }
+    }
+
+    fun toggleMonospace() {
+        _uiState.update { it.copy(isMonospace = !it.isMonospace) }
     }
 
     fun clearFileAccessError() {
