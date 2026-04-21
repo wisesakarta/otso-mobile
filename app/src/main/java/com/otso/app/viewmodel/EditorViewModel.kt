@@ -11,6 +11,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.otso.app.core.FileIO
 import com.otso.app.core.FontManager
+import com.otso.app.core.IntelligenceEngine
 import com.otso.app.core.OcrEngine
 import com.otso.app.core.OtsoPreferences
 import com.otso.app.core.SessionIO
@@ -53,6 +54,7 @@ data class EditorUiState(
     val fileAccessError: String? = null,
     val isOcrProcessing: Boolean = false,
     val ocrEngineLabel: String = "",
+    val isMonospace: Boolean = false,
 )
 
 class EditorViewModel(
@@ -219,12 +221,26 @@ class EditorViewModel(
                     lastEngine = output.engineUsed
                 }
 
-                val textToInsert = combinedText.toString()
-                if (textToInsert.isBlank()) {
+                val rawText = combinedText.toString()
+                if (rawText.isBlank()) {
                     _uiState.update {
                         it.copy(fileAccessError = "No text detected from scan.", ocrEngineLabel = lastEngine)
                     }
                     return@launch
+                }
+
+                // DNA: Intelligence Layer (Auto-formatting & Entity Extraction)
+                val textToInsert = withContext(Dispatchers.Default) {
+                    IntelligenceEngine.extractAndFormat(getApplication(), rawText)
+                }
+
+                _uiState.update { state -> 
+                    // Auto-enable monospace if text looks structured (many spaces in rows)
+                    val isStructured = textToInsert.lines().any { it.count { c -> c == ' ' } > 3 }
+                    state.copy(
+                        isMonospace = state.isMonospace || isStructured,
+                        ocrEngineLabel = "$lastEngine + Intel"
+                    )
                 }
 
                 val active = activeTab
@@ -239,7 +255,7 @@ class EditorViewModel(
                 }
                 
                 insertTextAtCursor(active.id, insert)
-                _uiState.update { it.copy(ocrEngineLabel = lastEngine) }
+                _uiState.update { it.copy(ocrEngineLabel = "$lastEngine + Intel") }
             } catch (_: Exception) {
                 _uiState.update {
                     it.copy(fileAccessError = "Failed to process scan.")
@@ -495,6 +511,10 @@ class EditorViewModel(
 
     fun toggleFind() {
         _uiState.update { it.copy(isFindOpen = !it.isFindOpen) }
+    }
+
+    fun toggleMonospace() {
+        _uiState.update { it.copy(isMonospace = !it.isMonospace) }
     }
 
     fun clearFileAccessError() {

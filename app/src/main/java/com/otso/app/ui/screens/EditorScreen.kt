@@ -74,6 +74,7 @@ fun EditorScreen(
     ) { result ->
         if (result.resultCode == RESULT_OK) {
             val scanResult = GmsDocumentScanningResult.fromActivityResultIntent(result.data)
+            // Perfectness: GMS provides high-quality rectified image
             scanResult?.pages?.firstOrNull()?.imageUri?.let { scannedUri: Uri ->
                 viewModel.importScannedText(scannedUri)
             }
@@ -138,7 +139,11 @@ fun EditorScreen(
                 onRenameFinish = { viewModel.finishEditingTab() },
             )
 
-            val customFontFamily = rememberDynamicFontFamily(uiState.customFontPath)
+            val customFontFamily = if (uiState.isMonospace) {
+                com.otso.app.ui.theme.JetBrainsMono
+            } else {
+                rememberDynamicFontFamily(uiState.customFontPath)
+            }
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -182,9 +187,12 @@ fun EditorScreen(
                             activeTab?.let { tab -> viewModel.insertTextAtCursor(tab.id, insert) }
                         },
                         onFindClick = { viewModel.toggleFind() },
+                        onMonoToggle = { viewModel.toggleMonospace() },
+                        isMonospace = uiState.isMonospace,
                         onScanClick = {
                             val options = GmsDocumentScannerOptions.Builder()
-                                .setGalleryImportAllowed(false)
+                                .setGalleryImportAllowed(true)
+                                .setPageLimit(1)
                                 .setResultFormats(GmsDocumentScannerOptions.RESULT_FORMAT_JPEG)
                                 .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
                                 .build()

@@ -14,6 +14,7 @@
         android:theme="@style/Theme.Otso"
         android:localeConfig="@xml/locale_config">
 
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

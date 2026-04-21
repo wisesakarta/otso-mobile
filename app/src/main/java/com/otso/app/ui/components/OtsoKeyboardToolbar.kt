@@ -28,6 +28,8 @@ fun OtsoKeyboardToolbar(
     onKeyInsert: (String) -> Unit,
     onFindClick: () -> Unit,
     onScanClick: () -> Unit,
+    onMonoToggle: () -> Unit,
+    isMonospace: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme.otsoColors
@@ -85,6 +87,30 @@ fun OtsoKeyboardToolbar(
                     contentDescription = "Scan",
                     modifier = Modifier.size(14.dp),
                     tint = colors.ink.copy(alpha = 0.65f),
+                )
+            }
+
+            // Monospace Toggle — Industrial ASCII Mode
+            Box(
+                modifier = Modifier
+                    .size(26.dp)
+                    .background(
+                        color = if (isMonospace) colors.accent.copy(alpha = 0.12f) else colors.edge.copy(alpha = 0.08f),
+                        shape = OtsoSquircleShape(smoothing = 0.8f),
+                    )
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() },
+                    ) {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onMonoToggle()
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "M",
+                    style = OtsoTypography.uiLabelMedium.copy(fontSize = 10.sp),
+                    color = if (isMonospace) colors.accent else colors.ink.copy(alpha = 0.65f),
                 )
             }
 

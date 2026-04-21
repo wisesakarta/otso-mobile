@@ -8,6 +8,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.net.Uri
 import androidx.exifinterface.media.ExifInterface
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import com.google.android.gms.tasks.Task
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
@@ -27,6 +29,7 @@ object OcrEngine {
         MLKIT_MULTISCALE,
         MLKIT_LINEBOOST,
         MLKIT_HYBRID,
+        NEURAL_BOOST,
     }
 
     data class OcrOutput(
@@ -44,6 +47,7 @@ object OcrEngine {
             EngineMode.MLKIT_MULTISCALE -> OcrOutput(runMlKitMultiScale(context, uri), "mlkit-multiscale")
             EngineMode.MLKIT_LINEBOOST -> OcrOutput(runMlKitLineBoost(context, uri), "mlkit-lineboost")
             EngineMode.MLKIT_HYBRID -> runHybrid(context, uri)
+            EngineMode.NEURAL_BOOST -> OcrOutput(runNeuralBoost(context, uri), "neural-boost")
         }
     }
 
@@ -54,10 +58,12 @@ object OcrEngine {
     private suspend fun runHybrid(context: Context, uri: Uri): OcrOutput {
         val baseline = runCatching { OcrOutput(runMlKit(context, uri), "mlkit-baseline") }.getOrNull()
         val preprocessed = runCatching { OcrOutput(runMlKitPreprocessed(context, uri), "mlkit-preprocessed") }.getOrNull()
+        val neuralBoost = runCatching { OcrOutput(runNeuralBoost(context, uri), "neural-boost") }.getOrNull()
         val multiscale = runCatching { OcrOutput(runMlKitMultiScale(context, uri), "mlkit-multiscale") }.getOrNull()
         val lineBoost = runCatching { OcrOutput(runMlKitLineBoost(context, uri), "mlkit-lineboost") }.getOrNull()
 
-        val primary = listOfNotNull(baseline, preprocessed)
+        // DNA: Prioritize Neural Boost as the highest quality baseline
+        val primary = listOfNotNull(neuralBoost, baseline, preprocessed)
             .maxByOrNull { qualityScore(it.text) }
         if (primary != null && primary.text.isNotBlank()) return primary
 
@@ -76,6 +82,13 @@ object OcrEngine {
         val cleaned = withContext(Dispatchers.Default) { preprocess(bitmap) }
         val image = InputImage.fromBitmap(cleaned, 0)
         
+        return recognize(image)
+    }
+
+    private suspend fun runNeuralBoost(context: Context, uri: Uri): String {
+        val bitmap = withContext(Dispatchers.IO) { decodeBitmap(context, uri) } ?: return ""
+        val boosted = withContext(Dispatchers.Default) { NeuralVisionEngine.neuralBoost(bitmap) }
+        val image = InputImage.fromBitmap(boosted, 0)
         return recognize(image)
     }
 
@@ -127,10 +140,84 @@ object OcrEngine {
     private suspend fun recognize(image: InputImage): String {
         val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
         return try {
-            recognizer.process(image).await().text.orEmpty().normalizeForScoring().cleanupNoise()
+            val result = recognizer.process(image).await()
+            reconstructLayout(result).normalizeForScoring().cleanupSemanticNoise().cleanupNoise()
         } finally {
             recognizer.close()
         }
+    }
+
+    private fun reconstructLayout(visionText: com.google.mlkit.vision.text.Text): String {
+        if (visionText.textBlocks.isEmpty()) return ""
+
+        // DNA: Grid+ Engine (The Final Boss)
+        // Flatten ALL elements (words) for absolute spatial control
+        val allElements = visionText.textBlocks.flatMap { it.lines }.flatMap { it.elements }
+        if (allElements.isEmpty()) return ""
+
+        // Project X-axis Gutters (Column Detection)
+        // We look for horizontal intervals that contain text across the whole document
+        val sortedByLeft = allElements.sortedBy { it.boundingBox?.left ?: 0 }
+        
+        // Group elements into ROWS using a flexible PVG logic
+        val rows = mutableListOf<MutableList<com.google.mlkit.vision.text.Text.Element>>()
+        val sortedByTop = allElements.sortedBy { it.boundingBox?.top ?: 0 }
+        
+        for (element in sortedByTop) {
+            val elBox = element.boundingBox ?: continue
+            val elMidY = (elBox.top + elBox.bottom) / 2
+            
+            val matchingRow = rows.find { row ->
+                val rTop = row.minOf { it.boundingBox?.top ?: Int.MAX_VALUE }
+                val rBottom = row.maxOf { it.boundingBox?.bottom ?: Int.MIN_VALUE }
+                val rMidY = (rTop + rBottom) / 2
+                
+                val midDistance = Math.abs(elMidY - rMidY)
+                val tolerance = (elBox.height() * 0.8f).coerceAtLeast(12f)
+                
+                midDistance < tolerance || elMidY in rTop..rBottom
+            }
+            
+            if (matchingRow != null) {
+                matchingRow.add(element)
+            } else {
+                rows.add(mutableListOf(element))
+            }
+        }
+
+        val resultText = StringBuilder()
+        for (row in rows) {
+            val sortedRow = row.sortedBy { it.boundingBox?.left ?: 0 }
+            var currentRowText = ""
+            var lastRight = -1
+            
+            for (element in sortedRow) {
+                val left = element.boundingBox?.left ?: 0
+                val right = element.boundingBox?.right ?: 0
+                val height = element.boundingBox?.height() ?: 20
+                
+                if (lastRight != -1) {
+                    val gap = left - lastRight
+                    if (gap > 0) {
+                        // DNA: Monospaced Gutter Alignment
+                        // We use the character width for THIS specific word to calculate spaces
+                        val charWidth = element.boundingBox?.width()?.let { it / element.text.length.coerceAtLeast(1) } ?: (height / 2)
+                        val spaceCount = (gap / charWidth.coerceAtLeast(1)).coerceIn(1, 40)
+                        currentRowText += " ".repeat(spaceCount)
+                    } else if (gap > -5) {
+                        currentRowText += " "
+                    }
+                }
+                
+                currentRowText += element.text
+                lastRight = right
+            }
+            
+            if (resultText.isNotEmpty()) resultText.append("\n")
+            resultText.append(currentRowText)
+        }
+
+        return resultText.toString()
     }
 
     private fun qualityScore(text: String): Int {
@@ -261,11 +348,17 @@ object OcrEngine {
         val scaledB = upscaleIfNeeded(input, minWidth = 1800)
         val grayA = toGrayscale(scaledA)
         val grayB = toGrayscale(scaledB)
-        val otsuA = otsuBinarize(grayA)
-        val otsuB = otsuBinarize(grayB)
-        val adaptedA = adaptiveBinarize(grayA)
+        
+        // Final Boss: Contrast Boost
+        val contrastA = adjustContrast(grayA, 1.25f)
+        val contrastB = adjustContrast(grayB, 1.5f)
+        
+        val otsuA = otsuBinarize(contrastA)
+        val otsuB = otsuBinarize(contrastB)
+        val adaptedA = adaptiveBinarize(contrastA)
         val invertedA = invertBitmap(otsuA)
-        variants += listOf(scaledA, grayA, otsuA, scaledB, grayB, otsuB, adaptedA, invertedA)
+        
+        variants += listOf(scaledA, grayA, contrastA, otsuA, scaledB, grayB, contrastB, otsuB, adaptedA, invertedA)
         return variants
     }
 
@@ -376,6 +469,21 @@ object OcrEngine {
             }
         }
         return threshold
+    }
+
+    private fun adjustContrast(source: Bitmap, contrast: Float): Bitmap {
+        val out = Bitmap.createBitmap(source.width, source.height, source.config ?: Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(out)
+        val paint = Paint()
+        val colorMatrix = ColorMatrix(floatArrayOf(
+            contrast, 0f, 0f, 0f, 0f,
+            0f, contrast, 0f, 0f, 0f,
+            0f, 0f, contrast, 0f, 0f,
+            0f, 0f, 0f, 1f, 0f
+        ))
+        paint.colorFilter = ColorMatrixColorFilter(colorMatrix)
+        canvas.drawBitmap(source, 0f, 0f, paint)
+        return out
     }
 
     private fun invertBitmap(source: Bitmap): Bitmap {
@@ -496,4 +604,10 @@ private fun String.normalizeForScoring(): String {
         .map { it.trim() }
         .filter { it.isNotEmpty() }
         .joinToString("\n")
+}
+private fun String.cleanupSemanticNoise(): String {
+    if (this.isBlank()) return ""
+    return this.replace(Regex("(\\d+)6(?=\\s|$)"), "$1G") // DNA: Fix 506 -> 50G (common units error)
+               .replace(Regex("(?i)Indcmaret|Indemart|TIndksmaat"), "Indomaret") // DNA: Brand normalization
+               .replace(Regex("(?i)IDM KC6"), "IDM KCG") // Indomaret specific
 }

@@ -49,6 +49,11 @@ android {
             isUniversalApk = false
         }
     }
+
+    @Suppress("DEPRECATION")
+    androidResources {
+        noCompress += "tflite"
+    }
 }
 
 dependencies {
@@ -58,6 +63,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.text.google.fonts)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.material3)
@@ -69,7 +75,11 @@ dependencies {
     implementation(libs.google.material)
     implementation(libs.google.gson)
     implementation(libs.google.mlkit.text.recognition)
+    implementation(libs.google.mlkit.language.id)
+    implementation(libs.google.mlkit.entity.extraction)
     implementation(libs.google.mlkit.document.scanner)
+    implementation(libs.tensorflow.lite)
+    implementation(libs.tensorflow.lite.support)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     testImplementation(libs.junit)
