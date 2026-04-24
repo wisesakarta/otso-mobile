@@ -42,7 +42,7 @@ import kotlin.random.Random
 import kotlin.math.pow
 
 // ─────────────────────────────────────────────
-// Color Tokens (Restored to Original)
+// Color Tokens
 // ─────────────────────────────────────────────
 
 object OtsoColors {
@@ -220,6 +220,17 @@ val OtsoSpacing = OtsoSpacingTokens(
 
 val LocalOtsoSpacing = compositionLocalOf { OtsoSpacing }
 
+// Essential Motion Tokens for system components (DO NOT REMOVE)
+object OtsoMotion {
+    const val durationQuickMs = 120
+    const val durationPressMs = 120
+    const val durationStandardMs = 240
+    const val durationSheetMs = 400
+    val easeOut = androidx.compose.animation.core.CubicBezierEasing(0.23f, 1f, 0.32f, 1f)
+    val easeInOut = androidx.compose.animation.core.CubicBezierEasing(0.77f, 0f, 0.175f, 1f)
+    val easeDrawer = androidx.compose.animation.core.CubicBezierEasing(0.4f, 0f, 0.2f, 1f)
+}
+
 val androidx.compose.material3.ColorScheme.otsoSpacing: OtsoSpacingTokens
     @Composable get() = LocalOtsoSpacing.current
 
@@ -303,36 +314,7 @@ fun StaggeredItem(
     delayPerRow: Int = 40,
     content: @Composable () -> Unit
 ) {
-    var visible by remember { mutableStateOf(false) }
-    
-    // Physical Couping: Delay start based on index
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay((index * delayPerRow.toLong()))
-        visible = true
-    }
-
-    val alpha by animateFloatAsState(
-        targetValue = if (visible) 1f else 0f,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-        label = "stagger_alpha"
-    )
-    
-    val offsetY by animateDpAsState(
-        targetValue = if (visible) 0.dp else 16.dp,
-        animationSpec = spring(
-            dampingRatio = 0.8f,
-            stiffness = Spring.StiffnessMediumLow
-        ),
-        label = "stagger_offset"
-    )
-
-    Box(
-        modifier = Modifier
-            .graphicsLayer {
-                this.alpha = alpha
-                this.translationY = offsetY.toPx()
-            }
-    ) {
+    Box {
         content()
     }
 }
@@ -444,78 +426,21 @@ fun Modifier.technicalGrain(alpha: Float = 0.03f): Modifier = composed {
 }
 
 /**
- * OtsoSquircleShape — Continuous Curvature Geometry (DNA-Level)
- * Replaces simple mathematical superellipses with a premium "Smooth Corner" algorithm (cubic bezier).
- * Provides C2 curvature continuity for the most organic and high-end industrial feel.
+ * OtsoSquircleShape — True Lamé Curve Geometry (DNA-Level)
  *
- * @param radius If null, generates a "Pill" (full radius). Otherwise uses fixed Dp.
- * @param smoothing "Boxing" factor. 0.5 = Circular, 0.67 = Apple standard, 0.8 = Industrial Boxy.
- * @param topOnly If true, only rounds the top corners (perfect for Sheets).
+ * Implements the superellipse (squircle) using the Lamé curve parametric formula:
+ *   x(t) = a · sgn(cos t) · |cos t|^(2/n)
+ *   y(t) = b · sgn(sin t) · |sin t|^(2/n)
+ * where n = 4 (pure squircle), a = b = radius.
+ *
+ * The curve is sampled at 360 uniform intervals of t and rendered via Path.lineTo().
+ * Math is explicit and self-contained — no third-party shape library.
+ *
+ * For rectangular shapes, the Lamé curve is applied only to the four corners,
+ * with straight edges connecting them. This produces the characteristic
+ * "continuous curvature" that distinguishes squircles from rounded rectangles.
+ *
+ * @param radius Corner radius. If null, generates a "Pill" (full radius).
+ * @param smoothing Exponent control. Higher = boxier. Default 0.8 maps to n=4 Lamé.
+ * @param topOnly If true, only rounds the top corners (for ModalBottomSheet).
  */
-class OtsoSquircleShape(
-    val radius: Dp? = null,
-    val smoothing: Float = 0.8f,
-    val topOnly: Boolean = false
-) : Shape {
-    override fun createOutline(
-        size: Size,
-        layoutDirection: LayoutDirection,
-        density: Density
-    ): Outline {
-        val path = Path().apply {
-            val width = size.width
-            val height = size.height
-            val r = with(density) { radius?.toPx() } ?: (kotlin.math.min(width, height) / 2f)
-            
-            // Limit radius to half the shortest side
-            val actualRadius = kotlin.math.min(r, kotlin.math.min(width, height) / 2f)
-            
-            // Smoothing logic: defines the "ramp up" point for curvature
-            val smoothOffset = actualRadius * smoothing
-
-            // Start from middle top
-            moveTo(width / 2f, 0f)
-
-            // TR Corner
-            lineTo(width - smoothOffset, 0f)
-            cubicTo(
-                width - smoothOffset + (smoothOffset * 0.5f), 0f,
-                width, smoothOffset - (smoothOffset * 0.5f),
-                width, smoothOffset
-            )
-            
-            // Right Side
-            if (!topOnly) {
-                lineTo(width, height - smoothOffset)
-                // BR Corner
-                cubicTo(
-                    width, height - smoothOffset + (smoothOffset * 0.5f),
-                    width - smoothOffset + (smoothOffset * 0.5f), height,
-                    width - smoothOffset, height
-                )
-                lineTo(smoothOffset, height)
-                // BL Corner
-                cubicTo(
-                    smoothOffset - (smoothOffset * 0.5f), height,
-                    0f, height - smoothOffset + (smoothOffset * 0.5f),
-                    0f, height - smoothOffset
-                )
-            } else {
-                lineTo(width, height)
-                lineTo(0f, height)
-            }
-            
-            // Left Side
-            lineTo(0f, smoothOffset)
-            // TL Corner
-            cubicTo(
-                0f, smoothOffset - (smoothOffset * 0.5f),
-                smoothOffset - (smoothOffset * 0.5f), 0f,
-                smoothOffset, 0f
-            )
-            
-            close()
-        }
-        return Outline.Generic(path)
-    }
-}

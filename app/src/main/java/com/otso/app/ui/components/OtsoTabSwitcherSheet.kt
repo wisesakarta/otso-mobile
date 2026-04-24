@@ -1,29 +1,25 @@
 package com.otso.app.ui.components
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.otso.app.ui.theme.OtsoSpacing
 import com.otso.app.ui.theme.OtsoTypography
 import com.otso.app.ui.theme.otsoClickable
 import com.otso.app.ui.theme.otsoColors
+import com.otso.app.ui.theme.OtsoSquircleShape
 import com.otso.app.ui.theme.StaggeredItem
 import com.otso.app.viewmodel.EditorUiState
 
@@ -39,116 +35,107 @@ fun OtsoTabSwitcherSheet(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(otsoColors.background),
+            .background(otsoColors.background)
+            .padding(bottom = 32.dp),
     ) {
-        // Simplified header
-        StaggeredItem(index = 0) {
-            Row(
+        // Header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Sessions",
+                style = OtsoTypography.uiTitle,
+                color = otsoColors.ink,
+            )
+            
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .padding(horizontal = 20.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                    .size(32.dp)
+                    .otsoClickable(onClick = onNewTab),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "${uiState.tabs.size}",
-                    style = OtsoTypography.uiTechnical,
-                    color = otsoColors.muted.copy(alpha = 0.4f),
-                    modifier = Modifier.weight(1f),
+                Icon(
+                    imageVector = OtsoIcons.Plus,
+                    contentDescription = "New",
+                    modifier = Modifier.size(20.dp),
+                    tint = otsoColors.accent
                 )
-                // Standardized Interaction Column (Interaction Center alignment)
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .padding(end = 4.dp) // Optical center correction
-                        .otsoClickable(onClick = onNewTab),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = OtsoIcons.Plus,
-                        contentDescription = "New Tab",
-                        modifier = Modifier.size(18.dp),
-                        tint = otsoColors.accent,
-                    )
-                }
             }
         }
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(1),
-            contentPadding = PaddingValues(bottom = 32.dp),
+        LazyColumn(
             modifier = Modifier.fillMaxWidth(),
         ) {
             itemsIndexed(uiState.tabs, key = { _, tab -> tab.id }) { index, tab ->
                 val isActive = index == uiState.activeIndex
-
-                StaggeredItem(index = index + 1) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(64.dp)
-                            .otsoClickable(onClick = { onTabSwitch(index) })
-                            .background(if (isActive) otsoColors.accent.copy(alpha = 0.08f) else Color.Transparent)
-                            .drawBehind {
-                                drawLine(
-                                    color = otsoColors.edge.copy(alpha = 0.1f),
-                                    start = Offset(0f, size.height),
-                                    end = Offset(size.width, size.height),
-                                    strokeWidth = 1.dp.toPx(),
-                                )
-                                if (isActive) {
-                                    drawLine(
-                                        color = otsoColors.accent,
-                                        start = Offset(0f, 0f),
-                                        end = Offset(0f, size.height),
-                                        strokeWidth = 2.dp.toPx(),
-                                    )
-                                }
-                            }
-                            .padding(horizontal = OtsoSpacing.globalMargin),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = tab.title,
-                                style = if (isActive) OtsoTypography.uiLabelMedium else OtsoTypography.uiLabel,
-                                color = if (isActive) {
-                                    otsoColors.accent
-                                } else {
-                                    if (tab.isModified) otsoColors.ink else otsoColors.ink.copy(alpha = 0.65f)
-                                },
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-
-                            Text(
-                                text = tab.content.take(80).replace("\n", " "),
-                                style = OtsoTypography.uiCaption.copy(fontSize = 11.sp),
-                                color = otsoColors.ink.copy(alpha = 0.45f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-
-                        // Standardized Interaction Column (Interaction Center alignment)
-                        if (isActive) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .padding(end = 4.dp) // Optical center correction
-                                    .otsoClickable { onCloseTab(index) },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = OtsoIcons.X,
-                                    contentDescription = "Close Tab",
-                                    modifier = Modifier.size(16.dp),
-                                    tint = otsoColors.accent
-                                )
-                            }
-                        }
-                    }
+                
+                StaggeredItem(index = index) {
+                    TabItem(
+                        title = tab.title,
+                        isActive = isActive,
+                        isModified = tab.isModified,
+                        onClick = { onTabSwitch(index) },
+                        onClose = { onCloseTab(index) }
+                    )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabItem(
+    title: String,
+    isActive: Boolean,
+    isModified: Boolean,
+    onClick: () -> Unit,
+    onClose: () -> Unit
+) {
+    val colors = MaterialTheme.colorScheme.otsoColors
+    
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(64.dp)
+            .otsoClickable(onClick = onClick)
+            .background(if (isActive) colors.accent.copy(alpha = 0.04f) else Color.Transparent)
+            .padding(horizontal = 20.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            if (isModified) {
+                Box(
+                    modifier = Modifier.size(6.dp).background(colors.accent, androidx.compose.foundation.shape.CircleShape)
+                )
+            }
+
+            Text(
+                text = title,
+                style = OtsoTypography.uiLabel,
+                color = if (isActive) colors.accent else colors.ink,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+
+            Box(
+                modifier = Modifier.size(32.dp).otsoClickable(onClick = onClose),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = OtsoIcons.X,
+                    contentDescription = "Close",
+                    modifier = Modifier.size(16.dp),
+                    tint = colors.muted.copy(alpha = 0.4f)
+                )
             }
         }
     }

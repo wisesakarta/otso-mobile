@@ -5,17 +5,23 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -25,55 +31,59 @@ import com.otso.app.ui.theme.otsoClickable
 import com.otso.app.ui.theme.otsoColors
 
 @Composable
-fun OtsoUnsavedDialog(
-    fileName: String,
+fun OtsoLinkDialog(
+    url: String,
+    onUrlChange: (String) -> Unit,
     onCancel: () -> Unit,
-    onDiscard: () -> Unit,
-    onSave: () -> Unit,
+    onApply: () -> Unit,
 ) {
     val otsoColors = MaterialTheme.colorScheme.otsoColors
+    val focusRequester = remember { FocusRequester() }
     val dialogShape = OtsoSquircleShape(radius = 20.dp, smoothing = 0.8f)
+    val inputShape = OtsoSquircleShape(radius = 10.dp, smoothing = 0.8f)
+
+    // Auto-focus when opened
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
 
     Dialog(
         onDismissRequest = onCancel,
         properties = DialogProperties(
-            usePlatformDefaultWidth = false, // Allow full-screen for our custom scrim
+            usePlatformDefaultWidth = false,
             decorFitsSystemWindows = true
         )
     ) {
-        // FULL SCREEN OVERLAY (SCRIM)
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.45f)) // Block interaction with 45% black scrim
+                .background(Color.Black.copy(alpha = 0.45f))
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() },
-                    onClick = onCancel // Clicking outside cancels
+                    onClick = onCancel
                 ),
             contentAlignment = Alignment.Center
         ) {
-            // DIALOG BOX (0dp Corner Radius)
             Column(
                 modifier = Modifier
-                    .width(300.dp)
+                    .width(320.dp)
                     .clip(dialogShape)
                     .background(otsoColors.surface, dialogShape)
                     .border(1.dp, otsoColors.edge, dialogShape)
                     .clickable(
                         indication = null,
                         interactionSource = remember { MutableInteractionSource() },
-                        onClick = {} // Consume clicks inside
+                        onClick = {}
                     )
             ) {
-                // Content Padding
                 Column(
                     modifier = Modifier
                         .padding(24.dp)
                         .fillMaxWidth()
                 ) {
                     Text(
-                        text = "Unsaved modifications",
+                        text = "Insert Link",
                         style = OtsoTypography.uiTitle,
                         color = otsoColors.ink
                     )
@@ -81,50 +91,57 @@ fun OtsoUnsavedDialog(
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     Text(
-                        text = "This file has unsaved changes. All data will be lost if you discard it.",
+                        text = "Enter the destination URL for the current selection.",
                         style = OtsoTypography.uiLabel,
-                        color = otsoColors.muted,
-                        textAlign = TextAlign.Start
+                        color = otsoColors.muted
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = fileName,
-                            style = OtsoTypography.uiTechnical,
-                            color = otsoColors.muted.copy(alpha = 0.6f)
+                    // URL Input Field
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(otsoColors.background, inputShape)
+                            .border(1.dp, otsoColors.edge, inputShape)
+                            .padding(12.dp)
+                    ) {
+                        BasicTextField(
+                            value = url,
+                            onValueChange = onUrlChange,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(focusRequester),
+                            textStyle = OtsoTypography.uiLabelMedium.copy(color = otsoColors.ink),
+                            cursorBrush = SolidColor(otsoColors.accent),
+                            singleLine = true,
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        OtsoModifiedDot()
+                        if (url.isEmpty()) {
+                            Text(
+                                text = "https://example.com",
+                                style = OtsoTypography.uiLabel,
+                                color = otsoColors.muted.copy(alpha = 0.5f)
+                            )
+                        }
                     }
                 }
 
-                // ACTION BUTTONS ROW (Mathematical Border Locking)
+                // Action Buttons
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
                         .drawBehind {
-                            // Top horizontal divider
                             drawLine(
                                 color = otsoColors.edge,
                                 start = Offset(0f, 0f),
                                 end = Offset(size.width, 0f),
                                 strokeWidth = 1.dp.toPx()
                             )
-                            // Vertical divider 1 (between Cancel and Discard)
                             drawLine(
                                 color = otsoColors.edge,
-                                start = Offset(size.width / 3f, 0f),
-                                end = Offset(size.width / 3f, size.height),
-                                strokeWidth = 1.dp.toPx()
-                            )
-                            // Vertical divider 2 (between Discard and Save)
-                            drawLine(
-                                color = otsoColors.edge,
-                                start = Offset(2 * size.width / 3f, 0f),
-                                end = Offset(2 * size.width / 3f, size.height),
+                                start = Offset(size.width / 2f, 0f),
+                                end = Offset(size.width / 2f, size.height),
                                 strokeWidth = 1.dp.toPx()
                             )
                         }
@@ -144,32 +161,17 @@ fun OtsoUnsavedDialog(
                         )
                     }
 
-                    // DISCARD
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .otsoClickable { onDiscard() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Discard",
-                            style = OtsoTypography.uiLabelMedium,
-                            color = otsoColors.ink
-                        )
-                    }
-
-                    // SAVE (Blueprint Blue Solid)
+                    // APPLY
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
                             .background(otsoColors.accent)
-                            .otsoClickable { onSave() },
+                            .otsoClickable { onApply() },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Save",
+                            text = "Apply",
                             style = OtsoTypography.uiLabelMedium,
                             color = otsoColors.background
                         )

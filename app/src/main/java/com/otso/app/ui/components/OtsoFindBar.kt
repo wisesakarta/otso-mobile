@@ -48,27 +48,15 @@ fun OtsoFindBar(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .height(if (isReplaceExpanded) 96.dp else 48.dp)
-            .background(colors.surface)
-            .drawBehind {
-                // Top border
-                drawLine(
-                    color = colors.edge.copy(alpha = 0.3f),
-                    start = Offset(0f, 0f),
-                    end = Offset(size.width, 0f),
-                    strokeWidth = 0.5.dp.toPx()
-                )
-                // Row Divider (Only if expanded)
-                if (isReplaceExpanded) {
-                    drawLine(
-                        color = colors.edge.copy(alpha = 0.2f),
-                        start = Offset(0f, size.height / 2f),
-                        end = Offset(size.width, size.height / 2f),
-                        strokeWidth = 0.5.dp.toPx()
-                    )
-                }
-            }
-            .padding(horizontal = OtsoSpacing.globalMargin)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .height(if (isReplaceExpanded) 96.dp else 44.dp)
+            .background(colors.surface, com.otso.app.ui.theme.OtsoSquircleShape(smoothing = 0.8f))
+            .border(
+                1.dp,
+                colors.edge.copy(alpha = if (colors.isDarkMode) 0.3f else 0.15f),
+                com.otso.app.ui.theme.OtsoSquircleShape(smoothing = 0.8f)
+            )
+            .padding(horizontal = 12.dp)
     ) {
         // ROW 1: Find Control
         Row(

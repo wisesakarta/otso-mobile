@@ -1,4 +1,4 @@
-package com.otso.app.ui.components
+﻿package com.otso.app.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,6 +16,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.otso.app.ui.theme.OtsoTypography
@@ -28,6 +29,8 @@ fun OtsoKeyboardToolbar(
     onKeyInsert: (String) -> Unit,
     onFindClick: () -> Unit,
     onScanClick: () -> Unit,
+    onUndoClick: () -> Unit,
+    onRedoClick: () -> Unit,
     onMonoToggle: () -> Unit,
     isMonospace: Boolean,
     modifier: Modifier = Modifier,
@@ -43,32 +46,32 @@ fun OtsoKeyboardToolbar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(36.dp)
+                .height(44.dp)
                 .shadow(
-                    elevation = if (isDark) 0.dp else 8.dp,
+                    elevation = if (isDark) 0.dp else 4.dp,
                     shape = OtsoSquircleShape(smoothing = 0.8f),
-                    ambientColor = Color.Black.copy(alpha = 0.08f),
-                    spotColor = Color.Black.copy(alpha = 0.06f),
+                    ambientColor = Color.Black.copy(alpha = 0.04f),
+                    spotColor = Color.Black.copy(alpha = 0.04f),
                 )
                 .background(
                     color = colors.surface,
                     shape = OtsoSquircleShape(smoothing = 0.8f),
                 )
                 .border(
-                    width = 0.5.dp,
-                    color = colors.edge.copy(alpha = if (isDark) 0.15f else 0.08f),
+                    width = 1.dp,
+                    color = colors.edge.copy(alpha = if (isDark) 0.3f else 0.15f),
                     shape = OtsoSquircleShape(smoothing = 0.8f),
                 )
-                .padding(horizontal = 10.dp),
+                .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             val haptic = LocalHapticFeedback.current
             
-            // Scan Button — Surgical Entry
+            // Scan Button
             Box(
                 modifier = Modifier
-                    .size(26.dp)
+                    .size(28.dp)
                     .background(
                         color = colors.edge.copy(alpha = 0.08f),
                         shape = OtsoSquircleShape(smoothing = 0.8f),
@@ -85,15 +88,15 @@ fun OtsoKeyboardToolbar(
                 androidx.compose.material3.Icon(
                     imageVector = OtsoIcons.Camera,
                     contentDescription = "Scan",
-                    modifier = Modifier.size(14.dp),
+                    modifier = Modifier.size(18.dp),
                     tint = colors.ink.copy(alpha = 0.65f),
                 )
             }
 
-            // Monospace Toggle — Industrial ASCII Mode
+            // Monospace Toggle
             Box(
                 modifier = Modifier
-                    .size(26.dp)
+                    .size(28.dp)
                     .background(
                         color = if (isMonospace) colors.accent.copy(alpha = 0.12f) else colors.edge.copy(alpha = 0.08f),
                         shape = OtsoSquircleShape(smoothing = 0.8f),
@@ -109,7 +112,7 @@ fun OtsoKeyboardToolbar(
             ) {
                 Text(
                     text = "M",
-                    style = OtsoTypography.uiLabelMedium.copy(fontSize = 10.sp),
+                    style = OtsoTypography.uiLabelMedium.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
                     color = if (isMonospace) colors.accent else colors.ink.copy(alpha = 0.65f),
                 )
             }
@@ -127,15 +130,62 @@ fun OtsoKeyboardToolbar(
                 )
             }
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Find key — Blueprint Blue accent
+            // Undo
             Box(
                 modifier = Modifier
-                    .height(26.dp)
-                    .widthIn(min = 40.dp)
+                    .size(28.dp)
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() },
+                    ) {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onUndoClick()
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                androidx.compose.material3.Icon(
+                    imageVector = OtsoIcons.Undo,
+                    contentDescription = "Undo",
+                    modifier = Modifier.size(18.dp),
+                    tint = colors.ink.copy(alpha = 0.65f),
+                )
+            }
+
+            // Redo
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() },
+                    ) {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onRedoClick()
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                androidx.compose.material3.Icon(
+                    imageVector = OtsoIcons.Redo,
+                    contentDescription = "Redo",
+                    modifier = Modifier.size(18.dp),
+                    tint = colors.ink.copy(alpha = 0.65f),
+                )
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Find key
+            Box(
+                modifier = Modifier
+                    .height(28.dp)
+                    .widthIn(min = 48.dp)
                     .background(
-                        color = Color(0xFF001AE2),
+                        color = colors.accent.copy(alpha = 0.12f),
+                        shape = OtsoSquircleShape(smoothing = 0.8f),
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = colors.accent.copy(alpha = 0.25f),
                         shape = OtsoSquircleShape(smoothing = 0.8f),
                     )
                     .clickable(
@@ -145,13 +195,13 @@ fun OtsoKeyboardToolbar(
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onFindClick()
                     }
-                    .padding(horizontal = 10.dp),
+                    .padding(horizontal = 12.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "find",
-                    style = OtsoTypography.uiCaption.copy(fontSize = 11.sp),
-                    color = Color.White,
+                    style = OtsoTypography.uiCaption.copy(fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
+                    color = colors.accent,
                 )
             }
         }
@@ -166,7 +216,7 @@ private fun ToolbarKey(
 ) {
     Box(
         modifier = Modifier
-            .height(26.dp)
+            .height(28.dp)
             .widthIn(min = 32.dp)
             .background(
                 color = colors.edge.copy(alpha = 0.08f),

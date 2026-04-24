@@ -78,8 +78,11 @@ dependencies {
     implementation(libs.google.mlkit.language.id)
     implementation(libs.google.mlkit.entity.extraction)
     implementation(libs.google.mlkit.document.scanner)
+    implementation(libs.google.mlkit.translate)
     implementation(libs.tensorflow.lite)
     implementation(libs.tensorflow.lite.support)
+    implementation(libs.compose.rich.editor)
+
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     testImplementation(libs.junit)

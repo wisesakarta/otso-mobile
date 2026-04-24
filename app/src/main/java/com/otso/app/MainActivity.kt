@@ -1,6 +1,5 @@
 package com.otso.app
 
-import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -12,8 +11,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.ui.graphics.Color
 import com.otso.app.ui.screens.EditorScreen
 import com.otso.app.ui.screens.AboutScreen
+import com.otso.app.ui.theme.OtsoMotion
 import com.otso.app.ui.theme.OtsoTheme
 import com.otso.app.viewmodel.EditorViewModel
 
@@ -47,6 +50,62 @@ class MainActivity : ComponentActivity() {
                 NavHost(
                     navController = navController,
                     startDestination = "editor",
+                    enterTransition = {
+                        fadeIn(
+                            animationSpec = tween(
+                                durationMillis = OtsoMotion.durationStandardMs,
+                                easing = OtsoMotion.easeOut,
+                            )
+                        ) + slideIntoContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Start,
+                            animationSpec = tween(
+                                durationMillis = 320,
+                                easing = OtsoMotion.easeDrawer,
+                            ),
+                        )
+                    },
+                    exitTransition = {
+                        fadeOut(
+                            animationSpec = tween(
+                                durationMillis = 220,
+                                easing = OtsoMotion.easeInOut,
+                            )
+                        ) + slideOutOfContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Start,
+                            animationSpec = tween(
+                                durationMillis = 280,
+                                easing = OtsoMotion.easeInOut,
+                            ),
+                        )
+                    },
+                    popEnterTransition = {
+                        fadeIn(
+                            animationSpec = tween(
+                                durationMillis = OtsoMotion.durationStandardMs,
+                                easing = OtsoMotion.easeOut,
+                            )
+                        ) + slideIntoContainer(
+                            AnimatedContentTransitionScope.SlideDirection.End,
+                            animationSpec = tween(
+                                durationMillis = 320,
+                                easing = OtsoMotion.easeDrawer,
+                            ),
+                        )
+                    },
+                    popExitTransition = {
+                        fadeOut(
+                            animationSpec = tween(
+                                durationMillis = 220,
+                                easing = OtsoMotion.easeInOut,
+                            )
+                        ) + slideOutOfContainer(
+                            AnimatedContentTransitionScope.SlideDirection.End,
+                            animationSpec = tween(
+                                durationMillis = 280,
+                                easing = OtsoMotion.easeInOut,
+                            ),
+                        )
+                    }
                 ) {
                     composable("editor") {
                         EditorScreen(

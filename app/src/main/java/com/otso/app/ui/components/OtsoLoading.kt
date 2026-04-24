@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.otso.app.ui.theme.OtsoMotion
 import com.otso.app.ui.theme.OtsoTypography
 import com.otso.app.ui.theme.otsoColors
 import kotlinx.coroutines.delay
@@ -45,10 +46,10 @@ fun OtsoAsteriskLoader(
             transitionSpec = {
                 // DNA: Blur-Crossfade Transition (Emil Engineering)
                 // We use a custom slide + fade to simulate organic morphing
-                (fadeIn(animationSpec = tween(120, easing = LinearEasing)) + 
-                 scaleIn(initialScale = 0.8f, animationSpec = tween(120))) togetherWith
-                (fadeOut(animationSpec = tween(120, easing = LinearEasing)) + 
-                 scaleOut(targetScale = 1.2f, animationSpec = tween(120)))
+                (fadeIn(animationSpec = tween(OtsoMotion.durationQuickMs, easing = OtsoMotion.easeOut)) +
+                    scaleIn(initialScale = 0.95f, animationSpec = tween(OtsoMotion.durationQuickMs, easing = OtsoMotion.easeOut))) togetherWith
+                (fadeOut(animationSpec = tween(OtsoMotion.durationQuickMs, easing = OtsoMotion.easeInOut)) +
+                    scaleOut(targetScale = 1.04f, animationSpec = tween(OtsoMotion.durationQuickMs, easing = OtsoMotion.easeInOut)))
             },
             label = "ascii_morph"
         ) { char ->

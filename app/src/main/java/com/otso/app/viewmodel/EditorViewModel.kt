@@ -1,5 +1,8 @@
 package com.otso.app.viewmodel
 
+import com.mohamedrejeb.richeditor.model.RichTextState
+
+
 import android.app.Application
 import android.content.res.Configuration
 import android.net.Uri
@@ -16,9 +19,12 @@ import com.otso.app.core.OcrEngine
 import com.otso.app.core.OtsoPreferences
 import com.otso.app.core.SessionIO
 import com.otso.app.core.TextCodec
+import com.otso.app.core.TranslationEngine
 import com.otso.app.model.TabDocument
 import com.otso.app.model.TabSource
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,6 +33,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 import java.util.UUID
 
 data class EditorUiState(
@@ -53,15 +60,40 @@ data class EditorUiState(
     val customFontName: String? = null,
     val fileAccessError: String? = null,
     val isOcrProcessing: Boolean = false,
+    val isTranslationProcessing: Boolean = false,
+    val showTranslationDialog: Boolean = false,
+    val translationSourceTag: String = "auto",
+    val translationTargetTag: String = "en",
     val ocrEngineLabel: String = "",
     val isMonospace: Boolean = false,
+    val richTextStates: Map<String, RichTextState> = emptyMap(),
+    val historyStacks: Map<String, List<String>> = emptyMap(),
+    val redoStacks: Map<String, List<String>> = emptyMap(),
+    val lastHistoryTimestamps: Map<String, Long> = emptyMap(),
+    val showLinkDialog: Boolean = false,
+    val linkDialogUrl: String = "",
+    val pendingLinkTabId: String? = null,
+    val highlighterColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color(0xFFF9EB73),
+    val showHighlighterPalette: Boolean = false,
+
+ // key = tab.id
 )
+
 
 class EditorViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
 
+    private companion object {
+        const val MIN_EDITOR_FONT_SP = 10
+        const val MAX_EDITOR_FONT_SP = 64
+        const val GESTURE_COMMIT_DEBOUNCE_MS = 80L
+    }
+
+    private var isInternalOperation = false
+    private var gestureFontCommitJob: Job? = null
     private val _uiState = MutableStateFlow(EditorUiState())
+
     val uiState: StateFlow<EditorUiState> = _uiState.asStateFlow()
     private val sessionIO = SessionIO(getApplication())
     private var preferredFontSizeSp: Int = 15
@@ -149,13 +181,19 @@ class EditorViewModel(
             val newValues = state.textFieldValues.toMutableMap().apply {
                 put(newTab.id, TextFieldValue(newTab.content))
             }
+            val richState = RichTextState()
             state.copy(
                 tabs = newTabs,
                 activeIndex = newTabs.lastIndex,
                 textFieldValues = newValues,
+                richTextStates = state.richTextStates + (newTab.id to richState),
+                historyStacks = state.historyStacks + (newTab.id to listOf("")),
+                redoStacks = state.redoStacks + (newTab.id to emptyList()),
+                lastHistoryTimestamps = state.lastHistoryTimestamps + (newTab.id to System.currentTimeMillis()),
             )
         }
     }
+
 
     fun handleFileOpened(uri: Uri) {
         viewModelScope.launch {
@@ -182,6 +220,9 @@ class EditorViewModel(
                         tabs = newTabs,
                         activeIndex = newTabs.lastIndex,
                         textFieldValues = newValues,
+                        historyStacks = state.historyStacks + (newTab.id to listOf(decoded.content)),
+                        redoStacks = state.redoStacks + (newTab.id to emptyList()),
+                        lastHistoryTimestamps = state.lastHistoryTimestamps + (newTab.id to System.currentTimeMillis()),
                     )
                 }
             } catch (_: Exception) {
@@ -199,6 +240,94 @@ class EditorViewModel(
     fun importScannedText(uri: Uri) {
         // Surgical: Reuse existing robust pipeline
         importScannedUris(listOf(uri))
+    }
+
+    fun openTranslationDialog() {
+        _uiState.update { state ->
+            val defaultTarget = state.translationTargetTag.takeIf { it.isNotBlank() && it != "auto" }
+                ?: normalizeLanguageTag(Locale.getDefault().language)
+            state.copy(
+                showTranslationDialog = true,
+                translationTargetTag = defaultTarget,
+            )
+        }
+    }
+
+    fun closeTranslationDialog() {
+        _uiState.update { it.copy(showTranslationDialog = false) }
+    }
+
+    fun setTranslationSourceTag(tag: String) {
+        _uiState.update { it.copy(translationSourceTag = normalizeLanguageTag(tag, allowAuto = true)) }
+    }
+
+    fun setTranslationTargetTag(tag: String) {
+        _uiState.update { it.copy(translationTargetTag = normalizeLanguageTag(tag)) }
+    }
+
+    fun translateText(tabId: String?) {
+        if (tabId == null) return
+        val stateSnapshot = _uiState.value
+        val tab = stateSnapshot.tabs.find { it.id == tabId } ?: return
+        val richState = stateSnapshot.richTextStates[tab.id]
+
+        val selectedRange = richState
+            ?.selection
+            ?.takeIf { it.start != it.end }
+            ?.let { TextRange(it.min, it.max) }
+
+        val sourceText = when {
+            richState != null && selectedRange != null -> {
+                val start = selectedRange.start.coerceAtLeast(0)
+                val end = selectedRange.end.coerceAtMost(richState.annotatedString.length)
+                richState.annotatedString.text.substring(start, end)
+            }
+            richState != null -> richState.annotatedString.text
+            else -> tab.content
+        }
+
+        if (sourceText.isBlank()) {
+            _uiState.update { it.copy(fileAccessError = "Nothing to translate.") }
+            return
+        }
+
+        val preferredSource = stateSnapshot.translationSourceTag.takeUnless { it == "auto" || it.isBlank() }
+        val preferredTarget = stateSnapshot.translationTargetTag.ifBlank { Locale.getDefault().language }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isTranslationProcessing = true, showTranslationDialog = false) }
+            try {
+                val output = withContext(Dispatchers.IO) {
+                    TranslationEngine.translate(
+                        text = sourceText,
+                        preferredTargetTag = preferredTarget,
+                        preferredSourceTag = preferredSource,
+                    )
+                }
+
+                if (output.text.isBlank()) {
+                    _uiState.update { it.copy(fileAccessError = "Translation returned empty output.") }
+                    return@launch
+                }
+
+                if (richState != null && selectedRange != null) {
+                    richState.replaceTextRange(selectedRange, output.text)
+                    val caretStart = selectedRange.start.coerceAtLeast(0)
+                    val caretEnd = (caretStart + output.text.length).coerceAtMost(richState.annotatedString.length)
+                    richState.selection = TextRange(caretStart, caretEnd)
+                } else if (richState != null) {
+                    richState.setMarkdown(output.text)
+                } else {
+                    updateTextFieldValue(tab.id, TextFieldValue(output.text))
+                }
+            } catch (_: Exception) {
+                _uiState.update {
+                    it.copy(fileAccessError = "Translation failed. Ensure network is available for model download.")
+                }
+            } finally {
+                _uiState.update { it.copy(isTranslationProcessing = false) }
+            }
+        }
     }
 
     fun importScannedUris(uris: List<Uri>) {
@@ -277,15 +406,28 @@ class EditorViewModel(
     }
 
     fun setEditorFontSize(sizeSp: Int) {
-        val normalized = sizeSp.coerceIn(10, 72)
+        gestureFontCommitJob?.cancel()
+        val normalized = sizeSp.coerceIn(MIN_EDITOR_FONT_SP, MAX_EDITOR_FONT_SP)
         viewModelScope.launch {
             OtsoPreferences.setEditorFontSize(getApplication(), normalized)
         }
     }
 
+    fun commitEditorFontSizeFromGesture(sizeSp: Int) {
+        val normalized = sizeSp.coerceIn(MIN_EDITOR_FONT_SP, MAX_EDITOR_FONT_SP)
+        gestureFontCommitJob?.cancel()
+        gestureFontCommitJob = viewModelScope.launch {
+            delay(GESTURE_COMMIT_DEBOUNCE_MS)
+            OtsoPreferences.setEditorFontSize(getApplication(), normalized)
+        }
+    }
+
     fun updateFontSizeTemp(newSize: Int) {
-        val normalized = newSize.coerceIn(10, 72)
+        val normalized = newSize.coerceIn(MIN_EDITOR_FONT_SP, MAX_EDITOR_FONT_SP)
         _uiState.update { state ->
+            if (state.editorFontSizeSp == normalized) {
+                return@update state
+            }
             state.copy(
                 editorFontSizeSp = normalized,
                 tabs = state.tabs.map { it.copy(fontSizeSp = normalized) }
@@ -321,8 +463,10 @@ class EditorViewModel(
             val newTabs = state.tabs.toMutableList().also { it.removeAt(index) }
             val newValues = state.textFieldValues.toMutableMap().also { it.remove(removed.id) }
             val newActive = (index - 1).coerceAtLeast(0).coerceAtMost(newTabs.lastIndex)
-            state.copy(tabs = newTabs, activeIndex = newActive, textFieldValues = newValues)
+            val newRichStates = state.richTextStates.toMutableMap().also { it.remove(removed.id) }
+            state.copy(tabs = newTabs, activeIndex = newActive, textFieldValues = newValues, richTextStates = newRichStates)
         }
+
         
         // Cleanup internal scratch file
         if (removedTab.source == TabSource.INTERNAL && removedTab.uriOrPath.isNullOrBlank()) {
@@ -375,6 +519,163 @@ class EditorViewModel(
             state.copy(textFieldValues = newValues, tabs = newTabs)
         }
     }
+
+    fun getRichTextState(tabId: String): RichTextState? {
+        return _uiState.value.richTextStates[tabId]
+    }
+
+    fun initRichTextState(tabId: String, markdownContent: String): RichTextState {
+        val existing = _uiState.value.richTextStates[tabId]
+        if (existing != null) return existing
+
+        val state = RichTextState()
+        state.setMarkdown(markdownContent)
+        val now = System.currentTimeMillis()
+        _uiState.update { current ->
+            current.copy(
+                richTextStates = current.richTextStates + (tabId to state),
+                historyStacks = current.historyStacks + (tabId to listOf(markdownContent)),
+                redoStacks = current.redoStacks + (tabId to emptyList()),
+                lastHistoryTimestamps = current.lastHistoryTimestamps + (tabId to now),
+            )
+        }
+        return state
+    }
+
+    fun syncRichTextToTab(tabId: String, richTextState: RichTextState) {
+        val markdown = richTextState.toMarkdown()
+        val currentState = _uiState.value
+        val tab = currentState.tabs.find { it.id == tabId } ?: return
+        val currentContent = tab.content
+
+        if (markdown != currentContent) {
+            // DNA: Internal Operation Guard (Karpathy Surgical Fix)
+            // If this is an internal operation (Undo/Redo), we sync the content
+            // but DO NOT push to history or redo stacks.
+            if (isInternalOperation) {
+                _uiState.update { state ->
+                    state.copy(
+                        tabs = state.tabs.map {
+                            if (it.id == tabId) it.copy(content = markdown, isModified = true) else it
+                        },
+                        textFieldValues = state.textFieldValues + (tabId to TextFieldValue(markdown))
+                    )
+                }
+                return
+            }
+
+            val now = System.currentTimeMillis()
+
+            val lastTime = currentState.lastHistoryTimestamps[tabId] ?: 0L
+            val history = currentState.historyStacks[tabId] ?: emptyList()
+            val lastHistory = history.lastOrNull()
+            
+            // Push to history if:
+            // 1. First time
+            // 2. Significant pause (2 seconds)
+            // 3. Significant length change (e.g. > 10 chars)
+            val shouldPush = lastHistory == null || 
+                            (now - lastTime > 2000) || 
+                            (Math.abs(markdown.length - (lastHistory?.length ?: 0)) > 10)
+
+            val newHistory = if (shouldPush && markdown != lastHistory) {
+                (history + markdown).takeLast(50)
+            } else history
+
+            val newTimestamps = if (shouldPush) {
+                currentState.lastHistoryTimestamps + (tabId to now)
+            } else currentState.lastHistoryTimestamps
+
+            _uiState.value = currentState.copy(
+                tabs = currentState.tabs.map {
+                    if (it.id == tabId) it.copy(content = markdown, isModified = true) else it
+                },
+                textFieldValues = currentState.textFieldValues + (tabId to TextFieldValue(markdown)),
+                historyStacks = currentState.historyStacks + (tabId to newHistory),
+                redoStacks = if (shouldPush) currentState.redoStacks + (tabId to emptyList()) else currentState.redoStacks,
+                lastHistoryTimestamps = newTimestamps
+            )
+        }
+    }
+
+
+
+    fun undoRichText(tabId: String) {
+        val history = _uiState.value.historyStacks[tabId] ?: return
+        if (history.size < 2) return 
+        
+        val currentStateMark = history.last()
+        val previousStateMark = history[history.size - 2]
+        
+        val newRedo = (_uiState.value.redoStacks[tabId] ?: emptyList()) + currentStateMark
+        val newHistory = history.dropLast(1)
+        
+        _uiState.value = _uiState.value.copy(
+            historyStacks = _uiState.value.historyStacks + (tabId to newHistory),
+            redoStacks = _uiState.value.redoStacks + (tabId to newRedo)
+        )
+
+        applyHistoryState(tabId, previousStateMark)
+    }
+
+    fun redoRichText(tabId: String) {
+        val redo = _uiState.value.redoStacks[tabId] ?: return
+        if (redo.isEmpty()) return
+        
+        val nextStateMark = redo.last()
+        val newHistory = (_uiState.value.historyStacks[tabId] ?: emptyList()) + nextStateMark
+        val newRedo = redo.dropLast(1)
+        
+        _uiState.value = _uiState.value.copy(
+            historyStacks = _uiState.value.historyStacks + (tabId to newHistory),
+            redoStacks = _uiState.value.redoStacks + (tabId to newRedo)
+        )
+
+        applyHistoryState(tabId, nextStateMark)
+    }
+
+    private fun applyHistoryState(tabId: String, markdown: String) {
+        isInternalOperation = true
+        _uiState.value.richTextStates[tabId]?.setMarkdown(markdown)
+        viewModelScope.launch {
+            delay(50)
+            isInternalOperation = false
+        }
+    }
+
+    // --- LINK DIALOG LOGIC ---
+
+    fun openLinkDialog(tabId: String) {
+        val state = _uiState.value.richTextStates[tabId]
+        _uiState.update { it.copy(
+            showLinkDialog = true,
+            linkDialogUrl = "https://",
+            pendingLinkTabId = tabId
+        ) }
+    }
+
+    fun updateLinkDialogUrl(url: String) {
+        _uiState.update { it.copy(linkDialogUrl = url) }
+    }
+
+    fun closeLinkDialog() {
+        _uiState.update { it.copy(showLinkDialog = false, pendingLinkTabId = null) }
+    }
+
+    fun applyLink() {
+        val state = _uiState.value
+        val tabId = state.pendingLinkTabId ?: return
+        val url = state.linkDialogUrl
+        val richState = state.richTextStates[tabId]
+        
+        if (richState != null && url.isNotBlank()) {
+            richState.addLinkToSelection(url)
+        }
+        closeLinkDialog()
+    }
+
+
+
 
     fun getTextFieldValue(tabId: String): TextFieldValue {
         val state = _uiState.value
@@ -510,7 +811,40 @@ class EditorViewModel(
     }
 
     fun toggleFind() {
-        _uiState.update { it.copy(isFindOpen = !it.isFindOpen) }
+        _uiState.update { state ->
+            val opening = !state.isFindOpen
+            if (!opening) {
+                return@update state.copy(isFindOpen = false)
+            }
+
+            val activeTabId = state.tabs.getOrNull(state.activeIndex)?.id
+            val richState = activeTabId?.let { state.richTextStates[it] }
+            val selectedText = if (richState != null) {
+                val selection = richState.selection
+                if (selection.start == selection.end) {
+                    ""
+                } else {
+                    val start = selection.min.coerceAtLeast(0)
+                    val end = selection.max.coerceAtMost(richState.annotatedString.length)
+                    richState.annotatedString.text.substring(
+                        start,
+                        end,
+                    )
+                }
+            } else {
+                ""
+            }
+
+            state.copy(
+                isFindOpen = true,
+                findQuery = selectedText.takeIf { it.isNotBlank() } ?: state.findQuery,
+            )
+        }
+
+        val current = _uiState.value
+        if (current.findQuery.isNotBlank()) {
+            updateFindQuery(current.findQuery)
+        }
     }
 
     fun toggleMonospace() {
@@ -595,18 +929,24 @@ class EditorViewModel(
     }
 
     fun updateFindQuery(query: String) {
+        var shouldScroll = false
         _uiState.update { state ->
+            val searchText = getActiveSearchText(state)
             val matches = if (query.isBlank()) emptyList()
             else findMatches(
-                text = getTextFieldValue(state.tabs[state.activeIndex].id).text,
+                text = searchText,
                 query = query,
                 caseSensitive = state.findCaseSensitive,
             )
+            shouldScroll = matches.isNotEmpty()
             state.copy(
                 findQuery = query,
                 findMatches = matches,
                 findActiveIndex = if (matches.isNotEmpty()) 0 else -1,
             )
+        }
+        if (shouldScroll) {
+            scrollToActiveMatch()
         }
     }
 
@@ -639,26 +979,58 @@ class EditorViewModel(
         val state = _uiState.value
         val activeMatch = state.findMatches.getOrNull(state.findActiveIndex) ?: return
         val tabId = state.tabs[state.activeIndex].id
-        val current = getTextFieldValue(tabId)
-        val newText = current.text.replaceRange(activeMatch, state.replaceQuery)
-        updateTextFieldValue(tabId, TextFieldValue(
-            text = newText,
-            selection = TextRange(activeMatch.first + state.replaceQuery.length),
-        ))
-        // Re-run find setelah replace
+        val richState = state.richTextStates[tabId]
+
+        if (richState != null) {
+            val range = TextRange(activeMatch.first, activeMatch.last + 1)
+            richState.replaceTextRange(range, state.replaceQuery)
+            val caret = (activeMatch.first + state.replaceQuery.length)
+                .coerceIn(0, richState.annotatedString.length)
+            richState.selection = TextRange(caret)
+        } else {
+            val current = getTextFieldValue(tabId)
+            val newText = current.text.replaceRange(activeMatch, state.replaceQuery)
+            updateTextFieldValue(
+                tabId,
+                TextFieldValue(
+                    text = newText,
+                    selection = TextRange(activeMatch.first + state.replaceQuery.length),
+                ),
+            )
+        }
+
         updateFindQuery(state.findQuery)
     }
 
     fun replaceAll() {
         val state = _uiState.value
         if (state.findQuery.isBlank()) return
+
         val tabId = state.tabs[state.activeIndex].id
-        val current = getTextFieldValue(tabId)
-        val newText = if (state.findCaseSensitive)
-            current.text.replace(state.findQuery, state.replaceQuery)
-        else
-            current.text.replace(state.findQuery, state.replaceQuery, ignoreCase = true)
-        updateTextFieldValue(tabId, TextFieldValue(text = newText))
+        val richState = state.richTextStates[tabId]
+
+        if (richState != null) {
+            val matches = findMatches(
+                text = richState.annotatedString.text,
+                query = state.findQuery,
+                caseSensitive = state.findCaseSensitive,
+            )
+            matches.asReversed().forEach { range ->
+                richState.replaceTextRange(
+                    TextRange(range.first, range.last + 1),
+                    state.replaceQuery,
+                )
+            }
+        } else {
+            val current = getTextFieldValue(tabId)
+            val newText = if (state.findCaseSensitive) {
+                current.text.replace(state.findQuery, state.replaceQuery)
+            } else {
+                current.text.replace(state.findQuery, state.replaceQuery, ignoreCase = true)
+            }
+            updateTextFieldValue(tabId, TextFieldValue(text = newText))
+        }
+
         updateFindQuery(state.findQuery)
     }
 
@@ -699,10 +1071,34 @@ class EditorViewModel(
         val state = _uiState.value
         val activeMatch = state.findMatches.getOrNull(state.findActiveIndex) ?: return
         val tabId = state.tabs[state.activeIndex].id
+        val richState = state.richTextStates[tabId]
+
+        if (richState != null) {
+            val end = (activeMatch.last + 1).coerceAtMost(richState.annotatedString.length)
+            richState.selection = TextRange(activeMatch.first.coerceAtLeast(0), end)
+            return
+        }
+
         val current = getTextFieldValue(tabId)
-        updateTextFieldValue(tabId, current.copy(
-            selection = TextRange(activeMatch.first, activeMatch.last + 1),
-        ))
+        updateTextFieldValue(
+            tabId,
+            current.copy(selection = TextRange(activeMatch.first, activeMatch.last + 1)),
+        )
+    }
+
+    private fun getActiveSearchText(state: EditorUiState): String {
+        val activeTabId = state.tabs.getOrNull(state.activeIndex)?.id ?: return ""
+        return state.richTextStates[activeTabId]?.annotatedString?.text
+            ?: state.textFieldValues[activeTabId]?.text
+            ?: state.tabs[state.activeIndex].content
+    }
+
+    private fun normalizeLanguageTag(tag: String, allowAuto: Boolean = false): String {
+        val normalized = tag.trim().lowercase().ifBlank { "en" }
+        if (allowAuto && normalized == "auto") {
+            return "auto"
+        }
+        return normalized.substringBefore('-')
     }
 
     fun toggleDarkMode() {
@@ -789,5 +1185,35 @@ class EditorViewModel(
             else -> return null
         }
         return candidate.substringAfterLast('/').trim() to extension
+    }
+
+    // --- HIGHLIGHTER LOGIC ---
+
+    fun toggleHighlighterPalette(open: Boolean) {
+        _uiState.update { it.copy(showHighlighterPalette = open) }
+    }
+
+    fun setHighlighterColor(color: androidx.compose.ui.graphics.Color) {
+        _uiState.update { it.copy(highlighterColor = color, showHighlighterPalette = false) }
+    }
+
+    fun applyHighlighter(tabId: String, selectedColor: androidx.compose.ui.graphics.Color? = null) {
+        val state = _uiState.value
+        val color = selectedColor ?: state.highlighterColor
+        val richState = state.richTextStates[tabId] ?: return
+        
+        val selection = richState.selection
+        if (selection.start == selection.end) {
+            richState.toggleSpanStyle(androidx.compose.ui.text.SpanStyle(background = color))
+        } else {
+            val range = androidx.compose.ui.text.TextRange(selection.min, selection.max)
+            val isAlreadyHighlighted = richState.currentSpanStyle.background == color
+            if (isAlreadyHighlighted) {
+                richState.removeSpanStyle(androidx.compose.ui.text.SpanStyle(background = color), range)
+            } else {
+                richState.addSpanStyle(androidx.compose.ui.text.SpanStyle(background = color), range)
+            }
+            richState.selection = range
+        }
     }
 }

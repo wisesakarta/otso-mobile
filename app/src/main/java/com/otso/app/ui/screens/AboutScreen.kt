@@ -9,7 +9,6 @@ import androidx.compose.ui.res.painterResource
 import com.otso.app.R
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.otso.app.ui.components.OtsoBackButton
@@ -21,7 +20,7 @@ import com.otso.app.ui.theme.technicalGrain
 /**
  * AboutScreen — The Product Manifesto.
  * Replicates desktop parity with Industrial Editorial standards.
- * Geometry: Absolute 0.dp (RectangleShape).
+ * Geometry: Squircle-driven surfaces, editorial alignment.
  * Typography: Left-aligned technical layout.
  */
 @Composable
@@ -69,37 +68,41 @@ fun AboutScreen(
                 Image(
                     painter = painterResource(id = logoRes),
                     contentDescription = "Otso Logo",
-                    modifier = Modifier.height(120.dp) // 2.5x of 48dp
+                    modifier = Modifier.height(120.dp)
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Version Control (uiTechnical)
                 Text(
-                    text = "v1.0.0-rc.1",
-                    style = otsoTypography.uiTechnical,
-                    color = otsoColors.muted
+                    text = "v1.0.0-rc.2",
+                    style = otsoTypography.uiTechnical.copy(letterSpacing = 0.3.sp),
+                    color = otsoColors.muted,
                 )
             }
 
-            Spacer(modifier = Modifier.height(80.dp))
+            Spacer(modifier = Modifier.height(72.dp))
 
             // The Doctrine: "Clarity. Function. Detail."
             Text(
-                text = "Clarity. Function. Detail.",
-                style = otsoTypography.uiTitleLarge,
+                text = "Clarity. Function.\nDetail.",
+                style = otsoTypography.uiTitleLarge.copy(
+                    lineHeight = 34.sp,
+                    letterSpacing = (-0.25).sp,
+                ),
                 color = otsoColors.ink,
-                lineHeight = 32.sp
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // The Craftsman Credit
             Text(
                 text = "Crafted with discipline by wisesakarta",
-                style = otsoTypography.uiLabelMedium,
+                style = otsoTypography.uiLabel.copy(
+                    lineHeight = 21.sp,
+                    letterSpacing = 0.1.sp,
+                ),
                 color = otsoColors.muted,
-                lineHeight = 20.sp
             )
             
             Spacer(modifier = Modifier.weight(1f))

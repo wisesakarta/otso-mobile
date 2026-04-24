@@ -30,12 +30,15 @@ import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import kotlinx.coroutines.delay
 import com.otso.app.ui.components.OtsoEditor
+import com.otso.app.ui.components.OtsoRichEditor
+import com.otso.app.ui.components.OtsoFormattingToolbar
 import com.otso.app.ui.components.OtsoFindBar
 import com.otso.app.ui.components.OtsoKeyboardToolbar
 import com.otso.app.ui.components.OtsoUnsavedDialog
 import com.otso.app.ui.components.OtsoMenuSheet
 import com.otso.app.ui.components.OtsoAsteriskLoader
 import com.otso.app.ui.components.OtsoTabBar
+import com.otso.app.ui.components.OtsoHighlighterPopup
 import com.otso.app.ui.components.OtsoTabSwitcherSheet
 import com.otso.app.ui.theme.OtsoColors
 import com.otso.app.model.TabSource
@@ -151,13 +154,18 @@ fun EditorScreen(
                     .verticalScroll(editorScrollState),
             ) {
                 if (activeTab != null) {
-                    OtsoEditor(
-                        value = viewModel.getTextFieldValue(activeTab.id),
-                        onValueChange = { viewModel.updateTextFieldValue(activeTab.id, it) },
+                    val richTextState = remember(activeTab.id) {
+                        viewModel.initRichTextState(activeTab.id, activeTab.content)
+                    }
+
+                    LaunchedEffect(richTextState.annotatedString) {
+                        viewModel.syncRichTextToTab(activeTab.id, richTextState)
+                    }
+
+                    OtsoRichEditor(
+                        richTextState = richTextState,
                         fontFamily = customFontFamily,
                         fontSizeSp = activeTab.fontSizeSp,
-                        findMatches = uiState.findMatches,
-                        findActiveIndex = uiState.findActiveIndex,
                         onFontSizeTempChange = { newSize: Int -> viewModel.updateFontSizeTemp(newSize) },
                         onFontSizeFinalChange = { newSize: Int -> viewModel.setEditorFontSize(newSize) },
                         scrollState = editorScrollState,
@@ -166,45 +174,62 @@ fun EditorScreen(
                 }
             }
 
-            if (imeVisible) {
-                if (uiState.isFindOpen) {
-                    OtsoFindBar(
-                        findQuery = uiState.findQuery,
-                        replaceQuery = uiState.replaceQuery,
-                        matchCount = uiState.findMatches.size,
-                        activeMatchIndex = uiState.findActiveIndex,
-                        onFindQueryChange = { viewModel.updateFindQuery(it) },
-                        onReplaceQueryChange = { viewModel.updateReplaceQuery(it) },
-                        onFindNext = { viewModel.findNext() },
-                        onFindPrevious = { viewModel.findPrevious() },
-                        onReplaceCurrent = { viewModel.replaceCurrent() },
-                        onReplaceAll = { viewModel.replaceAll() },
-                        onClose = { viewModel.closeFindBar() },
-                    )
-                } else {
-                    OtsoKeyboardToolbar(
-                        onKeyInsert = { insert ->
-                            activeTab?.let { tab -> viewModel.insertTextAtCursor(tab.id, insert) }
-                        },
-                        onFindClick = { viewModel.toggleFind() },
-                        onMonoToggle = { viewModel.toggleMonospace() },
-                        isMonospace = uiState.isMonospace,
-                        onScanClick = {
-                            val options = GmsDocumentScannerOptions.Builder()
-                                .setGalleryImportAllowed(true)
-                                .setPageLimit(1)
-                                .setResultFormats(GmsDocumentScannerOptions.RESULT_FORMAT_JPEG)
-                                .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
-                                .build()
+            // FindBar: Independent of keyboard visibility (Karpathy Surgical Fix)
+            // Users must be able to search text even when keyboard is dismissed.
+            if (uiState.isFindOpen) {
+                OtsoFindBar(
+                    findQuery = uiState.findQuery,
+                    replaceQuery = uiState.replaceQuery,
+                    matchCount = uiState.findMatches.size,
+                    activeMatchIndex = uiState.findActiveIndex,
+                    onFindQueryChange = { viewModel.updateFindQuery(it) },
+                    onReplaceQueryChange = { viewModel.updateReplaceQuery(it) },
+                    onFindNext = { viewModel.findNext() },
+                    onFindPrevious = { viewModel.findPrevious() },
+                    onReplaceCurrent = { viewModel.replaceCurrent() },
+                    onReplaceAll = { viewModel.replaceAll() },
+                    onClose = { viewModel.closeFindBar() },
+                )
+            }
 
-                            val scanner = GmsDocumentScanning.getClient(options)
-                            scanner.getStartScanIntent(context as android.app.Activity)
-                                .addOnSuccessListener { intentSender ->
-                                    scannerLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
-                                }
-                        }
-                    )
+            // Formatting + Key Insert Toolbars: Only when keyboard is active and find is closed
+            if (imeVisible && !uiState.isFindOpen) {
+                if (activeTab != null) {
+                    val richTextState = viewModel.getRichTextState(activeTab.id)
+                    if (richTextState != null) {
+                        OtsoFormattingToolbar(
+                            richTextState = richTextState,
+                            isDark = uiState.isDarkMode,
+                            onLinkClick = { viewModel.openLinkDialog(activeTab.id) }
+                        )
+                    }
                 }
+                OtsoKeyboardToolbar(
+                    onKeyInsert = { insert ->
+                        activeTab?.let { tab ->
+                            viewModel.insertTextAtCursor(tab.id, insert)
+                        }
+                    },
+                    onFindClick = { viewModel.toggleFind() },
+                    onScanClick = {
+                        val options = GmsDocumentScannerOptions.Builder()
+                            .setGalleryImportAllowed(true)
+                            .setPageLimit(1)
+                            .setResultFormats(GmsDocumentScannerOptions.RESULT_FORMAT_JPEG)
+                            .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
+                            .build()
+
+                        val scanner = GmsDocumentScanning.getClient(options)
+                        scanner.getStartScanIntent(context as android.app.Activity)
+                            .addOnSuccessListener { intentSender ->
+                                scannerLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
+                            }
+                    },
+                    onUndoClick = { activeTab?.let { tab -> viewModel.undoRichText(tab.id) } },
+                    onRedoClick = { activeTab?.let { tab -> viewModel.redoRichText(tab.id) } },
+                    onMonoToggle = { viewModel.toggleMonospace() },
+                    isMonospace = uiState.isMonospace,
+                )
             }
         }
 
@@ -220,6 +245,18 @@ fun EditorScreen(
                 onSave = { viewModel.saveAndCloseTab() }
             )
         }
+
+        
+        
+        if (uiState.showLinkDialog) {
+            com.otso.app.ui.components.OtsoLinkDialog(
+                url = uiState.linkDialogUrl,
+                onUrlChange = { viewModel.updateLinkDialogUrl(it) },
+                onCancel = { viewModel.closeLinkDialog() },
+                onApply = { viewModel.applyLink() }
+            )
+        }
+
 
         uiState.fileAccessError?.let { error ->
             LaunchedEffect(error) {
@@ -353,6 +390,7 @@ fun EditorScreen(
                 isCustomFontLoaded = uiState.customFontPath != null,
                 customFontName = uiState.customFontName,
                 onAboutClick = { navController.navigate("about") },
+                onTranslateClick = { viewModel.translateText(activeTab?.id) },
                 onDismiss = { viewModel.toggleMenu(false) },
             )
         }
