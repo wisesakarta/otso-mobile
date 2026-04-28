@@ -100,9 +100,6 @@ data class EditorUiState(
     val activeFoundryFamilyName: String? = null,
     val fileAccessError: String? = null,
     val ocrEngineLabel: String = "",
-    val showLinkDialog: Boolean = false,
-    val linkDialogUrl: String = "",
-    val pendingLinkTabId: String? = null,
     val customHighlightPalette: List<Int> = emptyList(),
     // False until font state is fully resolved on cold start.
     // EditorScreen uses this to suppress FOUT (Flash of Default Font).
@@ -505,7 +502,6 @@ class EditorViewModel(
                 val contentChanged = value.text != tab.content
                 newTabs[tabIndex] = tab.copy(
                     content = value.text,
-                    spans = if (contentChanged) emptyList() else tab.spans,
                     isModified = tab.isModified || contentChanged,
                 )
             }
@@ -552,43 +548,6 @@ class EditorViewModel(
     }
 
 
-    // --- LINK DIALOG LOGIC ---
-
-    fun openLinkDialog(tabId: String) {
-        _uiState.update {
-            it.copy(
-                showLinkDialog = true,
-                linkDialogUrl = "https://",
-                pendingLinkTabId = tabId,
-            )
-        }
-    }
-
-    fun updateLinkDialogUrl(url: String) {
-        _uiState.update { it.copy(linkDialogUrl = url) }
-    }
-
-    fun closeLinkDialog() {
-        _uiState.update { it.copy(showLinkDialog = false, pendingLinkTabId = null) }
-    }
-
-
-    fun applyLink() {
-        val state = _uiState.value
-        val tabId = state.pendingLinkTabId ?: return
-        val url = state.linkDialogUrl.trim()
-        if (url.isNotBlank()) {
-            val tfv = getTextFieldValue(tabId)
-            val start = tfv.selection.min.coerceIn(0, tfv.text.length)
-            val end = tfv.selection.max.coerceIn(0, tfv.text.length)
-            val selectedText = tfv.text.substring(start, end)
-            val linkMarkdown = "[$selectedText]($url)"
-            val newText = tfv.text.substring(0, start) + linkMarkdown + tfv.text.substring(end)
-            val caret = start + linkMarkdown.length
-            updateTextFieldValue(tabId, tfv.copy(text = newText, selection = TextRange(caret)))
-        }
-        closeLinkDialog()
-    }
 
 
 

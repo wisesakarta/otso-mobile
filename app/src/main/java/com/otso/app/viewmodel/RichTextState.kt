@@ -260,6 +260,39 @@ class RichTextState(initialBlock: ContentBlock) {
         insertTextAtSelection(insert)
     }
 
+    fun insertLinkAtSelection() {
+        val text = block.rawText
+        val len = text.length
+        val start = selection.min.coerceIn(0, len)
+        val end = selection.max.coerceIn(0, len)
+        val selectedText = text.substring(start, end)
+
+        val insertText: String
+        val cursorPos: Int
+        if (selectedText.isNotEmpty()) {
+            insertText = "[$selectedText]()"
+            cursorPos = start + selectedText.length + 3
+        } else {
+            insertText = "[]()"
+            cursorPos = start + 1
+        }
+
+        val deletedLength = end - start
+        val afterDeleteSpans = if (deletedLength > 0) {
+            block.spans.shiftOffsets(start, -deletedLength)
+        } else {
+            block.spans
+        }
+        val afterInsertSpans = afterDeleteSpans.shiftOffsets(start, insertText.length)
+        val newText = buildString {
+            append(text, 0, start)
+            append(insertText)
+            append(text, end, text.length)
+        }
+        block = block.copy(rawText = newText, spans = afterInsertSpans)
+        selection = TextRange(cursorPos)
+    }
+
     /**
      * Replaces the current selection with [insertText], or inserts at cursor when selection is empty.
      * Span offsets are adjusted for delete+insert so existing formatting stays aligned.
