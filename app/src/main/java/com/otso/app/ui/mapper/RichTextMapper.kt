@@ -6,11 +6,8 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontSynthesis
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextGeometricTransform
 import androidx.compose.ui.text.style.TextDecoration
-import com.otso.app.logic.TypefaceCache
 import com.otso.app.model.ContentBlock
 import com.otso.app.model.SpanStyleType
 import com.otso.app.ui.theme.OtsoColorScheme
@@ -18,7 +15,6 @@ import com.otso.app.ui.theme.OtsoColorScheme
 private const val HighlightBrightnessThreshold = 186f
 private const val ColorChannelScale = 255f
 private val DeepCharcoal = Color(0xFF121212)
-private val RenaissanceTransform = TextGeometricTransform(scaleX = 0.96f, skewX = -0.25f)
 
 /**
  * Maps a [ContentBlock] to a Compose [AnnotatedString] ready for display.
@@ -37,20 +33,10 @@ fun ContentBlock.toAnnotatedString(colors: OtsoColorScheme): AnnotatedString =
 
             val style: SpanStyle = when (span.style) {
                 SpanStyleType.Bold ->
-                    SpanStyle(
-                        fontFamily = FontFamily(TypefaceCache.boldTypeface()),
-                        fontWeight = FontWeight.Bold,
-                        fontSynthesis = FontSynthesis.None,
-                        textGeometricTransform = RenaissanceTransform,
-                    )
+                    SpanStyle(fontWeight = FontWeight.Bold)
 
                 SpanStyleType.Italic ->
-                    SpanStyle(
-                        fontFamily = FontFamily(TypefaceCache.italicTypeface()),
-                        fontStyle = FontStyle.Italic,
-                        fontSynthesis = FontSynthesis.None,
-                        textGeometricTransform = RenaissanceTransform,
-                    )
+                    SpanStyle(fontStyle = FontStyle.Italic)
 
                 SpanStyleType.Strikethrough ->
                     SpanStyle(textDecoration = TextDecoration.LineThrough)

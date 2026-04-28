@@ -415,7 +415,7 @@ fun EditorScreen(
                 if (hasSelection) {
                     OtsoFormattingToolbar(
                         richTextState = activeRichTextState!!,
-                        onLinkClick = { activeTabId?.let { viewModel.openLinkDialog(it) } },
+                        onLinkClick = { activeRichTextState?.insertLinkAtSelection() },
                         customHighlightPalette = uiState.customHighlightPalette,
                         activeHighlightHex = highlightPickerHex,
                         onHighlightColorChange = { hex -> setActiveHighlightHex(hex) },
@@ -451,15 +451,6 @@ fun EditorScreen(
 
         
         
-        if (uiState.showLinkDialog) {
-            com.otso.app.ui.components.OtsoLinkDialog(
-                url = uiState.linkDialogUrl,
-                onUrlChange = { viewModel.updateLinkDialogUrl(it) },
-                onCancel = { viewModel.closeLinkDialog() },
-                onApply = { viewModel.applyLink() }
-            )
-        }
-
         if (uiState.translation.isTranslationDialogOpen) {
             val hasSelection = activeRichTextState?.selection?.let { it.start != it.end } ?: false
             OtsoTranslateDialog(
