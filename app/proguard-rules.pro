@@ -1,18 +1,35 @@
-# Add project specific ProGuard rules here.
-# By default, the flags in this file are appended to flags specified
-# in D:\Apps\Dev\Android\sdk/tools/proguard/proguard-android.txt
-# You can edit the include path and order by changing the proguardFiles
-# directive in build.gradle.kts.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard/index.html
+-keepnames class com.otso.app.model.** { *; }
+-keepnames class com.otso.app.viewmodel.** { *; }
 
-# Add any project-specific rules here
+-keepattributes RuntimeVisibleAnnotations, *Annotation*, Signature
 
-# Baseline Coroutines & Compose Rules
--keepattributes *Annotation*, Signature, InnerClasses, EnclosingMethod
--keep class kotlinx.coroutines.** { *; }
--keep class androidx.compose.** { *; }
+-keepclassmembers class ** {
+    @androidx.compose.runtime.Stable <fields>;
+    @androidx.compose.runtime.Immutable <fields>;
+}
+
+-keepnames class kotlinx.coroutines.internal.DiagnosableCoroutineContext { *; }
+-keepclassmembernames class kotlinx.coroutines.** {
+    volatile <fields>;
+}
+
 -keepclassmembers class * extends androidx.lifecycle.ViewModel {
-    <init>(...);
+    public <init>(...);
+}
+
+-keepclassmembers class * implements android.os.Parcelable {
+    static ** CREATOR;
+}
+
+-keepclassmembers class * implements java.io.Serializable {
+    static final long serialVersionUID;
+    private static final java.io.ObjectStreamField[] serialPersistentFields;
+    private void writeObject(java.io.ObjectOutputStream);
+    private void readObject(java.io.ObjectInputStream);
+    java.lang.Object writeReplace();
+    java.lang.Object readResolve();
+}
+
+-keepclassmembers class **.R$* {
+    public static <fields>;
 }
