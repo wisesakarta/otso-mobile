@@ -12,6 +12,7 @@ data class TabDocument(
     val source: TabSource = TabSource.INTERNAL,
     val uriOrPath: String? = null,
     val content: String = "",
+    val spans: List<TextSpan> = emptyList(),
     val cursorLine: Int = 0,
     val cursorCol: Int = 0,
     val fontSizeSp: Int = 15,

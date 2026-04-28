@@ -5,8 +5,13 @@
 
 package com.otso.app.ui.theme
 
+import androidx.compose.animation.*
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -30,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.geometry.Size
@@ -38,6 +44,8 @@ import androidx.compose.ui.unit.LayoutDirection
 import java.io.File
 import android.graphics.Typeface as AndroidTypeface
 import com.otso.app.R
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlin.random.Random
 import kotlin.math.pow
 
@@ -58,13 +66,17 @@ object OtsoColors {
     val LightMuted       = Color(0xFF4D4D4D)
     val LightEdge        = Color(0xFFE0E2E2)
     val LightSurface     = Color(0xFFF2F4F4)
+    val LightShadow      = Color(0x1A2A3A5A) // soft navy-tinted gray
 
     val Accent           = Color(0xFF001AE2)
     val AccentMuted      = Color(0x2E001AE2) // 18% Opacity Blueprint Blue
+    val SelectionBackground = Color(0x73001AE2)
     val Black            = Color(0xFF000000)
     val Transparent      = Color(0x00000000)
+    val DarkShadow       = Color(0xFF000000) // deep midnight-black
 }
 
+@androidx.compose.runtime.Immutable
 data class OtsoColorScheme(
     val background: Color,
     val ink: Color,
@@ -73,6 +85,7 @@ data class OtsoColorScheme(
     val surface: Color,
     val accent: Color,
     val accentMuted: Color,
+    val shadowColor: Color,
     val isDarkMode: Boolean, 
 )
 
@@ -85,6 +98,7 @@ val LocalOtsoColors = compositionLocalOf {
         surface = OtsoColors.LightSurface,
         accent = OtsoColors.Accent,
         accentMuted = OtsoColors.AccentMuted,
+        shadowColor = OtsoColors.LightShadow,
         isDarkMode = false,
     )
 }
@@ -182,6 +196,7 @@ val OtsoTypography = OtsoTypographyTokens(
         fontWeight = FontWeight.Normal,
         fontSize   = 11.sp,
         lineHeight = 16.sp,
+        fontFeatureSettings = "tnum", // Tabular Numbers: prevents layout shift when numbers change
     ),
 )
 
@@ -214,7 +229,7 @@ val OtsoSpacing = OtsoSpacingTokens(
     chromeBandH       = 48.dp,
     commandBarH       = 10.dp,
     commandBarV       = 8.dp,
-    keyboardToolbarH  = 48.dp,
+    keyboardToolbarH  = 56.dp,
     editorialMargin   = 24.dp,
 )
 
@@ -226,6 +241,8 @@ object OtsoMotion {
     const val durationPressMs = 120
     const val durationStandardMs = 240
     const val durationSheetMs = 400
+    const val durationStaggerFadeMs = 140
+    const val staggerOffsetPx = 14
     val easeOut = androidx.compose.animation.core.CubicBezierEasing(0.23f, 1f, 0.32f, 1f)
     val easeInOut = androidx.compose.animation.core.CubicBezierEasing(0.77f, 0f, 0.175f, 1f)
     val easeDrawer = androidx.compose.animation.core.CubicBezierEasing(0.4f, 0f, 0.2f, 1f)
@@ -243,61 +260,143 @@ fun OtsoTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val targetBackground = if (darkTheme) OtsoColors.DarkBackground else OtsoColors.LightBackground
-    val targetInk = if (darkTheme) OtsoColors.DarkInk else OtsoColors.LightInk
-    val targetMuted = if (darkTheme) OtsoColors.DarkMuted else OtsoColors.LightMuted
-    val targetEdge = if (darkTheme) OtsoColors.DarkEdge else OtsoColors.LightEdge
-    val targetSurface = if (darkTheme) OtsoColors.DarkSurface else OtsoColors.LightSurface
+    // appliedDarkTheme is intentionally DELAYED relative to darkTheme.
+    // The overlay fires instantly (draw-phase only), then after ~50ms the color
+    // swap happens while the screen is covered — hiding the one-time mass
+    // recomposition of LocalOtsoColors consumers behind the opaque flash.
+    var appliedDarkTheme by remember { mutableStateOf(darkTheme) }
 
-    val animatedBackground by animateColorAsState(targetBackground, spring(stiffness = Spring.StiffnessMediumLow), label = "bg")
-    val animatedInk by animateColorAsState(targetInk, spring(stiffness = Spring.StiffnessMediumLow), label = "ink")
-    val animatedMuted by animateColorAsState(targetMuted, spring(stiffness = Spring.StiffnessMediumLow), label = "muted")
-    val animatedEdge by animateColorAsState(targetEdge, spring(stiffness = Spring.StiffnessMediumLow), label = "edge")
-    val animatedSurface by animateColorAsState(targetSurface, spring(stiffness = Spring.StiffnessMediumLow), label = "surface")
-    val animatedAccent by animateColorAsState(OtsoColors.Accent, spring(stiffness = Spring.StiffnessMediumLow), label = "accent")
-
-    val finalOtsoScheme = remember(darkTheme, animatedBackground, animatedInk, animatedMuted, animatedEdge, animatedSurface, animatedAccent) {
+    val finalOtsoScheme = remember(appliedDarkTheme) {
         OtsoColorScheme(
-            background = animatedBackground,
-            ink = animatedInk,
-            muted = animatedMuted,
-            edge = animatedEdge,
-            surface = animatedSurface,
-            accent = animatedAccent,
-            accentMuted = animatedAccent.copy(alpha = 0.18f),
-            isDarkMode = darkTheme
+            background = if (appliedDarkTheme) OtsoColors.DarkBackground else OtsoColors.LightBackground,
+            ink        = if (appliedDarkTheme) OtsoColors.DarkInk        else OtsoColors.LightInk,
+            muted      = if (appliedDarkTheme) OtsoColors.DarkMuted      else OtsoColors.LightMuted,
+            edge       = if (appliedDarkTheme) OtsoColors.DarkEdge       else OtsoColors.LightEdge,
+            surface    = if (appliedDarkTheme) OtsoColors.DarkSurface    else OtsoColors.LightSurface,
+            accent     = OtsoColors.Accent,
+            accentMuted= OtsoColors.AccentMuted,
+            shadowColor= if (appliedDarkTheme) OtsoColors.DarkShadow     else OtsoColors.LightShadow,
+            isDarkMode = appliedDarkTheme,
         )
     }
+    val colorScheme = remember(appliedDarkTheme) {
+        if (appliedDarkTheme) {
+            darkColorScheme(
+                background  = finalOtsoScheme.background,
+                surface     = finalOtsoScheme.surface,
+                primary     = finalOtsoScheme.accent,
+                onBackground= finalOtsoScheme.ink,
+                onSurface   = finalOtsoScheme.ink,
+                outline     = finalOtsoScheme.edge,
+            )
+        } else {
+            lightColorScheme(
+                background  = finalOtsoScheme.background,
+                surface     = finalOtsoScheme.surface,
+                primary     = finalOtsoScheme.accent,
+                onBackground= finalOtsoScheme.ink,
+                onSurface   = finalOtsoScheme.ink,
+                outline     = finalOtsoScheme.edge,
+            )
+        }
+    }
 
-    val colorScheme = if (darkTheme) {
-        darkColorScheme(
-            background = finalOtsoScheme.background,
-            surface = finalOtsoScheme.surface,
-            primary = finalOtsoScheme.accent,
-            onBackground = finalOtsoScheme.ink,
-            onSurface = finalOtsoScheme.ink,
-            outline = finalOtsoScheme.edge,
+    // Overlay: single hardware layer, reads alpha only in draw phase.
+    // OtsoMotion.easeOut (expo-out curve 0.23,1,0.32,1) — same curve used
+    // for all system-level transitions in this app.
+    val overlayColor = remember { mutableStateOf(Color.Transparent) }
+    val overlayAlpha = remember { Animatable(0f) }
+    val contentScale = remember { Animatable(1f) }
+    var isFirstRun by remember { mutableStateOf(true) }
+
+    LaunchedEffect(darkTheme) {
+        if (isFirstRun) {
+            isFirstRun = false
+            appliedDarkTheme = darkTheme
+            return@LaunchedEffect
+        }
+
+        val startMs = System.currentTimeMillis()
+
+        // Overlay = DESTINATION theme color: new theme "washes over" the screen.
+        // Going dark → black overlay, going light → warm-white overlay.
+        overlayColor.value = if (darkTheme) OtsoColors.DarkBackground else OtsoColors.LightBackground
+
+        // Gentle fade-in — no hard flash. 90ms feels intentional, not jarring.
+        overlayAlpha.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 90, easing = OtsoMotion.easeOut),
         )
-    } else {
-        lightColorScheme(
-            background = finalOtsoScheme.background,
-            surface = finalOtsoScheme.surface,
-            primary = finalOtsoScheme.accent,
-            onBackground = finalOtsoScheme.ink,
-            onSurface = finalOtsoScheme.ink,
-            outline = finalOtsoScheme.edge,
+
+        // Screen fully covered — trigger the heavy recomposition.
+        appliedDarkTheme = darkTheme
+
+        // Wait for the heavy recompose frame to start then finish.
+        withFrameNanos { }
+        withFrameNanos { }
+
+        // Reveal: new theme settles in with a gentle scale spring.
+        contentScale.snapTo(0.97f)
+
+        var frameCount = 0
+        var droppedFrames = 0
+        var lastFrameNs = System.nanoTime()
+
+        coroutineScope {
+            launch {
+                overlayAlpha.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(durationMillis = 260, easing = OtsoMotion.easeOut),
+                    block = {
+                        val now = System.nanoTime()
+                        val frameMs = (now - lastFrameNs) / 1_000_000f
+                        if (frameCount > 0 && frameMs > 20f) droppedFrames++
+                        frameCount++
+                        lastFrameNs = now
+                    },
+                )
+            }
+            launch {
+                contentScale.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(durationMillis = 300, easing = OtsoMotion.easeOut),
+                )
+            }
+        }
+
+        val totalMs = System.currentTimeMillis() - startMs
+        android.util.Log.w(
+            "OtsoTheme",
+            "transition→${if (darkTheme) "dark" else "light"}: ${totalMs}ms / ${frameCount}fr / ${droppedFrames}drop",
         )
     }
 
     CompositionLocalProvider(
-        LocalOtsoColors provides finalOtsoScheme,
+        LocalOtsoColors    provides finalOtsoScheme,
         LocalOtsoTypography provides OtsoTypography,
-        LocalOtsoSpacing provides OtsoSpacing,
+        LocalOtsoSpacing   provides OtsoSpacing,
     ) {
-        MaterialTheme(
-            colorScheme = colorScheme,
-            content = content,
-        )
+        MaterialTheme(colorScheme = colorScheme) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            scaleX = contentScale.value
+                            scaleY = contentScale.value
+                        },
+                ) {
+                    content()
+                }
+                // Overlay: alpha read in draw phase only — zero recompositions during fade.
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .graphicsLayer { alpha = overlayAlpha.value }
+                        .background(overlayColor.value),
+                )
+            }
+        }
     }
 }
 
@@ -311,10 +410,37 @@ fun OtsoTheme(
 @Composable
 fun StaggeredItem(
     index: Int,
-    delayPerRow: Int = 40,
+    delayPerRow: Int = 28,
     content: @Composable () -> Unit
 ) {
-    Box {
+    val visible = remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(index * delayPerRow.toLong())
+        visible.value = true
+    }
+
+    androidx.compose.animation.AnimatedVisibility(
+        visible = visible.value,
+        enter = fadeIn(
+            animationSpec = tween(
+                durationMillis = OtsoMotion.durationStaggerFadeMs,
+                easing = OtsoMotion.easeOut,
+            ),
+        ) +
+                slideInVertically(
+                    initialOffsetY = { OtsoMotion.staggerOffsetPx },
+                    animationSpec = spring<IntOffset>(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
+                ),
+        exit = fadeOut(
+            animationSpec = tween(
+                durationMillis = OtsoMotion.durationQuickMs,
+                easing = OtsoMotion.easeInOut,
+            ),
+        )
+    ) {
         content()
     }
 }
@@ -324,19 +450,23 @@ fun StaggeredItem(
  * Loads a .ttf/.otf from the provided path with silent failover.
  */
 @Composable
-fun rememberDynamicFontFamily(path: String?): FontFamily {
-    return remember(path) {
-        if (path == null) return@remember FontFamily.Monospace
+fun rememberDynamicFontFamily(
+    path: String?,
+    foundryFamily: FontFamily? = null,
+): FontFamily {
+    return remember(path, foundryFamily) {
+        if (foundryFamily != null) return@remember foundryFamily
+        if (path == null) return@remember GeneralSans
         
         try {
             val file = File(path)
-            if (!file.exists()) return@remember FontFamily.Monospace
+            if (!file.exists()) return@remember GeneralSans
             
             val androidTypeface = AndroidTypeface.createFromFile(file)
             FontFamily(androidTypeface)
         } catch (e: Exception) {
-          // Exception Shielding: Fail silently to Monospace
-            FontFamily.Monospace
+          // Exception shielding: fail silently to default editor family.
+            GeneralSans
         }
     }
 }
@@ -344,44 +474,53 @@ fun rememberDynamicFontFamily(path: String?): FontFamily {
 /**
  * DNA Utility: Universal Interaction Purge
  * Replaces Material Ripples with a tactile mechanical feedback:
- * 98% scale-down + 5% background contrast shift.
+ * 96% scale-down (configurable) + 8% background contrast shift.
+ *
+ * @param interactionSource Optional external source for coordinated animations.
+ * @param scaleTarget The target scale factor on press.
  */
 fun Modifier.otsoClickable(
     enabled: Boolean = true,
+    interactionSource: MutableInteractionSource? = null,
+    scaleTarget: Float = 0.96f,
     onClick: () -> Unit
 ): Modifier = composed {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.98f else 1f,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
-        label = "scale"
-    )
-    
+    val internalInteractionSource = interactionSource ?: remember { MutableInteractionSource() }
+    val isPressed by internalInteractionSource.collectIsPressedAsState()
+
+    // Animatable: values read inside graphicsLayer/drawWithContent = draw-phase only.
+    // animateFloatAsState with `by` delegate would recompose the entire containing
+    // composable on every animation frame — Animatable avoids that entirely.
+    val scale = remember { Animatable(1f) }
+    val pressAlpha = remember { Animatable(0f) }
     val colors = MaterialTheme.colorScheme.otsoColors
-    val overlayAlpha by animateFloatAsState(
-        targetValue = if (isPressed) 0.08f else 0f,
-        animationSpec = spring(stiffness = Spring.StiffnessMedium),
-        label = "overlay"
-    )
+
+    LaunchedEffect(isPressed) {
+        if (isPressed) {
+            launch { scale.animateTo(scaleTarget, spring(stiffness = Spring.StiffnessLow)) }
+            pressAlpha.animateTo(0.08f, spring(stiffness = Spring.StiffnessMedium))
+        } else {
+            launch { scale.animateTo(1f, spring(stiffness = Spring.StiffnessLow)) }
+            pressAlpha.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
+        }
+    }
 
     this
         .graphicsLayer {
-            scaleX = scale
-            scaleY = scale
+            scaleX = scale.value
+            scaleY = scale.value
         }
         .drawWithContent {
             drawContent()
-            if (overlayAlpha > 0f) {
+            if (pressAlpha.value > 0f) {
                 drawRect(
-                    color = colors.ink.copy(alpha = overlayAlpha),
+                    color = colors.ink.copy(alpha = pressAlpha.value),
                     size = size
                 )
             }
         }
         .clickable(
-            interactionSource = interactionSource,
+            interactionSource = internalInteractionSource,
             indication = null, // THE PURGE
             enabled = enabled,
             onClick = onClick
@@ -424,23 +563,3 @@ fun Modifier.technicalGrain(alpha: Float = 0.03f): Modifier = composed {
         }
     }
 }
-
-/**
- * OtsoSquircleShape — True Lamé Curve Geometry (DNA-Level)
- *
- * Implements the superellipse (squircle) using the Lamé curve parametric formula:
- *   x(t) = a · sgn(cos t) · |cos t|^(2/n)
- *   y(t) = b · sgn(sin t) · |sin t|^(2/n)
- * where n = 4 (pure squircle), a = b = radius.
- *
- * The curve is sampled at 360 uniform intervals of t and rendered via Path.lineTo().
- * Math is explicit and self-contained — no third-party shape library.
- *
- * For rectangular shapes, the Lamé curve is applied only to the four corners,
- * with straight edges connecting them. This produces the characteristic
- * "continuous curvature" that distinguishes squircles from rounded rectangles.
- *
- * @param radius Corner radius. If null, generates a "Pill" (full radius).
- * @param smoothing Exponent control. Higher = boxier. Default 0.8 maps to n=4 Lamé.
- * @param topOnly If true, only rounds the top corners (for ModalBottomSheet).
- */

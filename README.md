@@ -1,14 +1,14 @@
 # Otso Mobile
 
 <p align="center">
-  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png" alt="Otso" width="72">
+  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png" alt="Otso" width="320">
 </p>
 
 <p align="center">
   <strong>v1.0.0-rc.2</strong>
 </p>
 
-**Otso** is a high-fidelity Android text editor focused on speed, stability, and craftsmanship — the mobile counterpart to [Otso Desktop](https://github.com/wisesakarta/solum).
+**Otso** is a high-fidelity Android text editor focused on speed, stability, and craftsmanship — the mobile counterpart to [Otso Desktop](https://github.com/wisetechnicalStandardrta/solum).
 
 **Otso** adalah editor teks Android beresolusi tinggi yang berfokus pada kecepatan, stabilitas, dan pengerjaan yang cermat.
 
@@ -72,7 +72,7 @@ app/src/main/java/com/otso/app/
 ---
 
 ## Desktop Counterpart
-Otso Desktop (Win32, C++17): [github.com/wisesakarta/otso.git](https://github.com/wisesakarta/otso.git)
+Otso Desktop (Win32, C++17): [github.com/wisetechnicalStandardrta/otso.git](https://github.com/wisetechnicalStandardrta/otso.git)
 
 ---
 
@@ -80,3 +80,4 @@ Otso Desktop (Win32, C++17): [github.com/wisesakarta/otso.git](https://github.co
 MIT License — see [LICENSE](LICENSE)
 
 Crafted by Technical Standard
+

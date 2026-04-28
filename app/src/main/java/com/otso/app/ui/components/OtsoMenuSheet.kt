@@ -5,6 +5,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -18,12 +19,16 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.otso.app.ui.theme.OtsoMotion
 import com.otso.app.ui.theme.OtsoSpacing
 import com.otso.app.ui.theme.OtsoTypography
 import com.otso.app.ui.theme.otsoClickable
 import com.otso.app.ui.theme.otsoColors
-import com.otso.app.ui.theme.OtsoSquircleShape
 import com.otso.app.ui.theme.StaggeredItem
+import com.otso.app.ui.theme.SquircleShape
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
 
 @Composable
 fun OtsoMenuSheet(
@@ -50,7 +55,6 @@ fun OtsoMenuSheet(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(colors.background)
             .padding(bottom = 32.dp),
     ) {
         // Handle
@@ -60,10 +64,10 @@ fun OtsoMenuSheet(
                 .align(Alignment.CenterHorizontally)
                 .width(32.dp)
                 .height(4.dp)
-                .background(colors.edge.copy(alpha = 0.2f), OtsoSquircleShape(radius = 2.dp))
+                .background(colors.edge.copy(alpha = 0.2f), RoundedCornerShape(100.dp))
         )
 
-        // Group 1 — Core Actions (Back to Flat List)
+        // Group 1 Ã¢â‚¬â€ Core Actions (Back to Flat List)
         StaggeredItem(index = 0) { MenuTextItem("New Tab") { onNewTab(); onDismiss() } }
         StaggeredItem(index = 1) { MenuTextItem("Open File") { onOpenFile(); onDismiss() } }
         StaggeredItem(index = 2) { MenuTextItem("Import Image (OCR)", "experimental") { onImportImage(); onDismiss() } }
@@ -75,7 +79,7 @@ fun OtsoMenuSheet(
         Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(colors.edge.copy(alpha = 0.08f)))
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Group 2 — Settings
+        // Group 2 Ã¢â‚¬â€ Settings
         StaggeredItem(index = 6) {
             SettingsRow("Theme") {
                 SlidingThemeSelector(
@@ -119,15 +123,23 @@ fun OtsoMenuSheet(
                             modifier = Modifier.size(16.dp).otsoClickable { onResetCustomFont() },
                             tint = colors.muted
                         )
+                        Box(
+                            modifier = Modifier
+                                .otsoClickable { onLoadCustomFont() }
+                                .background(colors.edge.copy(alpha = 0.08f), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(text = "Set Font Folder", style = OtsoTypography.uiTechnical, color = colors.ink)
+                        }
                     }
                 } else {
                     Box(
                         modifier = Modifier
                             .otsoClickable { onLoadCustomFont() }
-                            .background(colors.edge.copy(alpha = 0.08f), OtsoSquircleShape(radius = 4.dp))
+                            .background(colors.edge.copy(alpha = 0.08f), RoundedCornerShape(4.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Text(text = "Inject", style = OtsoTypography.uiTechnical, color = colors.ink)
+                        Text(text = "Set Font Folder", style = OtsoTypography.uiTechnical, color = colors.ink)
                     }
                 }
             }
@@ -209,48 +221,71 @@ private fun SlidingThemeSelector(
 ) {
     val colors = MaterialTheme.colorScheme.otsoColors
     val modes = listOf("system", "dark", "light")
-    val selectedIndex = modes.indexOf(selectedMode).coerceAtLeast(0)
-    
+    val coroutineScope = rememberCoroutineScope()
+    var localSelectedMode by remember(selectedMode) { mutableStateOf(selectedMode) }
+    val selectedIndex = modes.indexOf(localSelectedMode).coerceAtLeast(0)
+
+    // Both offset AND width animate together — pill morphs seamlessly.
+    // tween + expo-out instead of spring: fixed duration feels intentional
+    // and snappy (most motion in first 30% of 200ms).
     val pillOffset by animateDpAsState(
-        targetValue = when(selectedIndex) {
+        targetValue = when (selectedIndex) {
             0 -> 0.dp
             1 -> 62.dp
             else -> 110.dp
         },
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy),
+        animationSpec = tween(durationMillis = 200, easing = OtsoMotion.easeOut),
         label = "pill_offset"
+    )
+    val pillWidth by animateDpAsState(
+        targetValue = if (selectedIndex == 0) 58.dp else 44.dp,
+        animationSpec = tween(durationMillis = 200, easing = OtsoMotion.easeOut),
+        label = "pill_width"
     )
 
     Box(
         modifier = Modifier
-            .background(colors.edge.copy(alpha = 0.08f), OtsoSquircleShape(smoothing = 0.8f))
+            .background(colors.edge.copy(alpha = 0.08f), SquircleShape(100.dp))
             .padding(1.dp)
     ) {
         Box(
             modifier = Modifier
                 .offset(x = pillOffset)
-                .width(if (selectedIndex == 0) 58.dp else 44.dp)
+                .width(pillWidth)
                 .height(28.dp)
-                .background(colors.accent.copy(alpha = 0.12f), OtsoSquircleShape(smoothing = 0.8f))
-                .border(1.dp, colors.accent.copy(alpha = 0.4f), OtsoSquircleShape(smoothing = 0.8f))
+                .background(colors.accent.copy(alpha = 0.12f), SquircleShape(100.dp))
+                .border(1.dp, colors.accent.copy(alpha = 0.4f), SquircleShape(100.dp))
         )
 
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             modes.forEachIndexed { index, mode ->
                 val isSelected = index == selectedIndex
+                val labelColor by animateColorAsState(
+                    targetValue = if (isSelected) colors.ink else colors.muted,
+                    animationSpec = tween(durationMillis = 160, easing = OtsoMotion.easeOut),
+                    label = "label_color_$index",
+                )
                 Box(
                     modifier = Modifier
                         .height(28.dp)
                         .width(if (index == 0) 58.dp else 44.dp)
-                        .otsoClickable { onModeChange(mode) },
+                        .otsoClickable {
+                            if (localSelectedMode != mode) {
+                                localSelectedMode = mode
+                                coroutineScope.launch {
+                                    delay(220L)
+                                    onModeChange(mode)
+                                }
+                            }
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = mode.capitalize(),
+                        text = mode.replaceFirstChar { it.uppercase() },
                         style = OtsoTypography.uiCaption.copy(
-                            fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
+                            fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
                         ),
-                        color = if (isSelected) colors.ink else colors.muted,
+                        color = labelColor,
                     )
                 }
             }

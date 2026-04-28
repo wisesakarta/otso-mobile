@@ -6,9 +6,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -121,30 +121,8 @@ fun OtsoTabBar(
             ) {
                 val isEditing = uiState.editingTabIndex == uiState.activeIndex
 
-                // DNA: Blur-Shift Transition (Lucas Yule / Emil Engineering)
-                val blurRadius by animateFloatAsState(
-                    targetValue = if (isEditing) 0f else 4f,
-                    animationSpec = spring(stiffness = Spring.StiffnessLow),
-                    label = "rename_blur"
-                )
-                val renameSlide by animateDpAsState(
-                    targetValue = if (isEditing) 0.dp else 4.dp,
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
-                    label = "rename_slide"
-                )
                 Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .graphicsLayer {
-                            // Apply blur if supported (API 31+) or just alpha fallback
-                            renderEffect = if (isEditing && blurRadius > 0.1f) {
-                                android.graphics.RenderEffect.createBlurEffect(
-                                    blurRadius, blurRadius, android.graphics.Shader.TileMode.CLAMP
-                                ).asComposeRenderEffect()
-                            } else null
-                            translationY = if (isEditing) renameSlide.toPx() else 0f
-                            alpha = 1f
-                        },
+                    modifier = Modifier.weight(1f),
                     contentAlignment = Alignment.CenterStart
                 ) {
                     if (isEditing) {
@@ -185,17 +163,30 @@ fun OtsoTabBar(
                             )
                         )
                     } else {
-                        Text(
-                            text = activeTab?.title ?: "Untitled",
-                            style = OtsoTypography.uiLabelMedium,
-                            color = if (activeTab?.isModified == true)
-                                otsoColors.ink  // full opacity = modified
-                            else
-                                otsoColors.ink.copy(alpha = 0.65f), // slightly muted = clean
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Text(
+                                text = activeTab?.title ?: "Untitled",
+                                style = OtsoTypography.uiLabelMedium,
+                                color = otsoColors.ink.copy(alpha = 0.65f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                            // Modified dot — a tiny accent circle signals unsaved changes
+                            if (activeTab?.isModified == true) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(5.dp)
+                                        .background(
+                                            Color(0xFF001AE2).copy(alpha = 0.5f),
+                                            CircleShape
+                                        )
+                                )
+                            }
+                        }
                     }
                 }
             }

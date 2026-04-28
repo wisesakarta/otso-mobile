@@ -25,7 +25,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.otso.app.ui.theme.OtsoSquircleShape
+import com.otso.app.ui.theme.SquircleShape
 import com.otso.app.ui.theme.OtsoTypography
 import com.otso.app.ui.theme.otsoClickable
 import com.otso.app.ui.theme.otsoColors
@@ -39,8 +39,8 @@ fun OtsoLinkDialog(
 ) {
     val otsoColors = MaterialTheme.colorScheme.otsoColors
     val focusRequester = remember { FocusRequester() }
-    val dialogShape = OtsoSquircleShape(radius = 20.dp, smoothing = 0.8f)
-    val inputShape = OtsoSquircleShape(radius = 10.dp, smoothing = 0.8f)
+    val dialogShape = SquircleShape(20.dp)
+    val inputShape = SquircleShape(10.dp)
 
     // Auto-focus when opened
     LaunchedEffect(Unit) {

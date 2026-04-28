@@ -8,7 +8,7 @@ set APP_HOME=%DIRNAME%
 
 for %%i in ("%APP_HOME%") do set APP_HOME=%%~fi
 
-set DEFAULT_JVM_OPTS="-Xmx64m" "-Xms64m"
+set DEFAULT_JVM_OPTS="-Xmx1024m" "-Xms1024m"
 
 if defined JAVA_HOME goto findJavaFromJavaHome
 

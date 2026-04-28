@@ -1,6 +1,11 @@
 package com.otso.app.ui.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -19,7 +24,7 @@ import androidx.compose.ui.unit.sp
 import com.otso.app.ui.theme.OtsoTypography
 import com.otso.app.ui.theme.otsoClickable
 import com.otso.app.ui.theme.otsoColors
-import com.otso.app.ui.theme.OtsoSquircleShape
+
 import com.otso.app.ui.theme.StaggeredItem
 import com.otso.app.viewmodel.EditorUiState
 
@@ -127,15 +132,39 @@ private fun TabItem(
             )
 
             Box(
-                modifier = Modifier.size(32.dp).otsoClickable(onClick = onClose),
+                modifier = Modifier.size(32.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = OtsoIcons.X,
-                    contentDescription = "Close",
-                    modifier = Modifier.size(16.dp),
-                    tint = colors.muted.copy(alpha = 0.4f)
-                )
+                androidx.compose.animation.AnimatedContent(
+                    targetState = isActive,
+                    transitionSpec = {
+                        (fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMedium)) +
+                            scaleIn(initialScale = 0.95f, animationSpec = spring(stiffness = Spring.StiffnessMedium)))
+                            .togetherWith(
+                                fadeOut(animationSpec = spring(stiffness = Spring.StiffnessMedium)) +
+                                    scaleOut(targetScale = 0.95f, animationSpec = spring(stiffness = Spring.StiffnessMedium))
+                            )
+                    },
+                    label = "tab_close_visibility",
+                ) { visible ->
+                    if (visible) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .otsoClickable(onClick = onClose),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = OtsoIcons.X,
+                                contentDescription = "Close",
+                                modifier = Modifier.size(16.dp),
+                                tint = colors.muted.copy(alpha = 0.4f)
+                            )
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.size(32.dp))
+                    }
+                }
             }
         }
     }

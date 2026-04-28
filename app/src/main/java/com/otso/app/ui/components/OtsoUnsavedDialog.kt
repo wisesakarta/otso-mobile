@@ -19,7 +19,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.otso.app.ui.theme.OtsoSquircleShape
+import com.otso.app.ui.theme.SquircleShape
 import com.otso.app.ui.theme.OtsoTypography
 import com.otso.app.ui.theme.otsoClickable
 import com.otso.app.ui.theme.otsoColors
@@ -32,7 +32,7 @@ fun OtsoUnsavedDialog(
     onSave: () -> Unit,
 ) {
     val otsoColors = MaterialTheme.colorScheme.otsoColors
-    val dialogShape = OtsoSquircleShape(radius = 20.dp, smoothing = 0.8f)
+    val dialogShape = SquircleShape(20.dp)
 
     Dialog(
         onDismissRequest = onCancel,

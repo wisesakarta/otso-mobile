@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,7 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.otso.app.ui.theme.OtsoSquircleShape
+import com.otso.app.ui.theme.SquircleShape
 import com.otso.app.ui.theme.OtsoTypography
 import com.otso.app.ui.theme.otsoClickable
 import com.otso.app.ui.theme.otsoColors
@@ -39,10 +40,10 @@ data class TranslationLanguage(
     val label: String,
 )
 
-private val sourceLanguages = listOf(
-    TranslationLanguage("auto", "Auto detect"),
-    TranslationLanguage("id", "Indonesian"),
+private val supportedLanguages = listOf(
+    TranslationLanguage("auto", "Auto-detect"),
     TranslationLanguage("en", "English"),
+    TranslationLanguage("id", "Indonesian"),
     TranslationLanguage("ja", "Japanese"),
     TranslationLanguage("ko", "Korean"),
     TranslationLanguage("zh", "Chinese"),
@@ -50,10 +51,12 @@ private val sourceLanguages = listOf(
     TranslationLanguage("fr", "French"),
     TranslationLanguage("de", "German"),
     TranslationLanguage("ar", "Arabic"),
+    TranslationLanguage("pt", "Portuguese"),
     TranslationLanguage("ru", "Russian"),
 )
 
-private val targetLanguages = sourceLanguages.filterNot { it.tag == "auto" }
+private val sourceLanguages = supportedLanguages
+private val targetLanguages = supportedLanguages.filterNot { it.tag == "auto" }
 
 @Composable
 fun OtsoTranslateDialog(
@@ -63,10 +66,11 @@ fun OtsoTranslateDialog(
     onSourceChange: (String) -> Unit,
     onTargetChange: (String) -> Unit,
     onCancel: () -> Unit,
-    onTranslate: () -> Unit,
+    onTranslate: (Boolean) -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme.otsoColors
-    val dialogShape = OtsoSquircleShape(radius = 20.dp, smoothing = 0.8f)
+    val dialogShape = SquircleShape(20.dp)
+    var selectionOnly by remember(hasSelection) { mutableStateOf(hasSelection) }
 
     Dialog(
         onDismissRequest = onCancel,
@@ -100,18 +104,9 @@ fun OtsoTranslateDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
-                    text = "Translate (ML Kit)",
+                    text = "Translate",
                     style = OtsoTypography.uiTitle,
                     color = colors.ink,
-                )
-                Text(
-                    text = if (hasSelection) {
-                        "Selected text will be translated."
-                    } else {
-                        "Whole note will be translated."
-                    },
-                    style = OtsoTypography.uiLabel,
-                    color = colors.muted,
                 )
 
                 LanguageSelector(
@@ -127,6 +122,19 @@ fun OtsoTranslateDialog(
                     onSelect = onTargetChange,
                 )
 
+                SelectionOption(
+                    label = "Selected text only",
+                    selected = selectionOnly && hasSelection,
+                    enabled = hasSelection,
+                    onSelect = { selectionOnly = true },
+                )
+                SelectionOption(
+                    label = "Entire document",
+                    selected = !selectionOnly || !hasSelection,
+                    enabled = true,
+                    onSelect = { selectionOnly = false },
+                )
+
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Row(
@@ -137,8 +145,8 @@ fun OtsoTranslateDialog(
                         modifier = Modifier
                             .weight(1f)
                             .height(40.dp)
-                            .background(colors.background, OtsoSquircleShape(radius = 10.dp, smoothing = 0.8f))
-                            .border(1.dp, colors.edge, OtsoSquircleShape(radius = 10.dp, smoothing = 0.8f))
+                            .background(colors.background, SquircleShape(10.dp))
+                            .border(1.dp, colors.edge, SquircleShape(10.dp))
                             .otsoClickable(onClick = onCancel),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -153,8 +161,8 @@ fun OtsoTranslateDialog(
                         modifier = Modifier
                             .weight(1f)
                             .height(40.dp)
-                            .background(colors.accent, OtsoSquircleShape(radius = 10.dp, smoothing = 0.8f))
-                            .otsoClickable(onClick = onTranslate),
+                            .background(colors.accent, SquircleShape(10.dp))
+                            .otsoClickable(onClick = { onTranslate(selectionOnly && hasSelection) }),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -170,6 +178,38 @@ fun OtsoTranslateDialog(
 }
 
 @Composable
+private fun SelectionOption(
+    label: String,
+    selected: Boolean,
+    enabled: Boolean,
+    onSelect: () -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme.otsoColors
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(36.dp)
+            .clickable(
+                enabled = enabled,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onSelect,
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(
+            selected = selected,
+            onClick = if (enabled) onSelect else null,
+        )
+        Text(
+            text = label,
+            style = OtsoTypography.uiLabelMedium,
+            color = if (enabled) colors.ink else colors.muted.copy(alpha = 0.5f),
+        )
+    }
+}
+
+@Composable
 private fun LanguageSelector(
     label: String,
     selectedTag: String,
@@ -177,7 +217,7 @@ private fun LanguageSelector(
     onSelect: (String) -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme.otsoColors
-    val selectorShape = OtsoSquircleShape(radius = 10.dp, smoothing = 0.8f)
+    val selectorShape = SquircleShape(10.dp)
     val selected = options.firstOrNull { it.tag == selectedTag } ?: options.first()
     var expanded by remember { mutableStateOf(false) }
 
