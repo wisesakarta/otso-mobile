@@ -30,8 +30,12 @@ jobs:
           chmod +x gradlew
           ./gradlew :app:assembleRelease
 
+      - name: List APK outputs
+        run: find app/build/outputs/apk -name "*.apk" 2>/dev/null || echo "No APKs found in output directory"
+
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
           name: OtsoNote-v2.0.0-Release
-          path: app/build/outputs/apk/release/*.apk
+          path: app/build/outputs/apk/release/**/*.apk
+          if-no-files-found: error
