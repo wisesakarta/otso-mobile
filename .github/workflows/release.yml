@@ -26,7 +26,9 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew :app:assembleRelease
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
