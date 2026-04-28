@@ -8,3 +8,11 @@
 #   http://developer.android.com/guide/developing/tools/proguard/index.html
 
 # Add any project-specific rules here
+
+# Baseline Coroutines & Compose Rules
+-keepattributes *Annotation*, Signature, InnerClasses, EnclosingMethod
+-keep class kotlinx.coroutines.** { *; }
+-keep class androidx.compose.** { *; }
+-keepclassmembers class * extends androidx.lifecycle.ViewModel {
+    <init>(...);
+}

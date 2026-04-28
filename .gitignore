@@ -17,6 +17,8 @@ captures/
 
 # Logs & temp
 *.log
+*.dump
+*.hprof
 hs_err_pid*
 replay_pid*
 
@@ -30,3 +32,13 @@ app/src/androidTest/assets/ocrTesting/
 
 # Agent workspace
 .agent/
+
+gradleLocal/
+.vscode/
+reports/
+
+# Security Credentials
+*.jks
+*.keystore
+keystore.properties
+
