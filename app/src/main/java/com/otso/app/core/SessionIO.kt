@@ -2,6 +2,7 @@ package com.otso.app.core
 
 import android.content.Context
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.otso.app.model.TabDocument
 import com.otso.app.viewmodel.EditorUiState
 import kotlinx.coroutines.Dispatchers
@@ -35,7 +36,11 @@ class SessionIO(
         return withContext(Dispatchers.IO) {
             if (!sessionFile.exists()) return@withContext null
             runCatching {
-                gson.fromJson(sessionFile.readText(), SessionData::class.java)
+                val type = object : TypeToken<SessionData>() {}.type
+                val data = gson.fromJson<SessionData>(sessionFile.readText(), type)
+                // Guard against Gson returning LinkedTreeMap elements when generic type
+                // info is corrupted by R8 — discard any session that can't be used safely.
+                if (data?.tabs?.any { it !is TabDocument } == true) null else data
             }.getOrNull()
         }
     }

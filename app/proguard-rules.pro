@@ -1,6 +1,11 @@
 -keep class com.otso.app.model.** { *; }
 -keepnames class com.otso.app.viewmodel.**
 
+# Gson-serialized data classes: field names must survive R8 renaming
+-keep class com.otso.app.core.SessionData { *; }
+-keep class com.google.gson.** { *; }
+-dontwarn com.google.gson.**
+
 -keepattributes RuntimeVisibleAnnotations, *Annotation*, Signature, EnclosingMethod, InnerClasses
 
 -keepclassmembers class ** {
