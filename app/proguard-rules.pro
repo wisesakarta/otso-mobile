@@ -1,7 +1,7 @@
--keepnames class com.otso.app.model.** { *; }
--keepnames class com.otso.app.viewmodel.** { *; }
+-keep class com.otso.app.model.** { *; }
+-keepnames class com.otso.app.viewmodel.**
 
--keepattributes RuntimeVisibleAnnotations, *Annotation*, Signature
+-keepattributes RuntimeVisibleAnnotations, *Annotation*, Signature, EnclosingMethod, InnerClasses
 
 -keepclassmembers class ** {
     @androidx.compose.runtime.Stable <fields>;
@@ -29,6 +29,9 @@
     java.lang.Object writeReplace();
     java.lang.Object readResolve();
 }
+
+-keepclassmembers class **$Serializer { *; }
+-keepclassmembers class **$Companion { *; }
 
 -keepclassmembers class **.R$* {
     public static <fields>;
