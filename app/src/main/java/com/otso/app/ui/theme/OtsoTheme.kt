@@ -44,7 +44,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import java.io.File
 import android.graphics.Typeface as AndroidTypeface
 import com.otso.app.R
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 import kotlin.math.pow
@@ -165,6 +164,8 @@ val OtsoTypography = OtsoTypographyTokens(
         fontWeight = FontWeight.Normal,
         fontSize   = 11.sp,
         lineHeight = 16.sp,
+        fontFeatureSettings = "tnum",
+        letterSpacing = 0.15.sp,
     ),
     uiTitle = TextStyle(
         fontFamily = GeneralSans,
@@ -306,7 +307,6 @@ fun OtsoTheme(
     // for all system-level transitions in this app.
     val overlayColor = remember { mutableStateOf(Color.Transparent) }
     val overlayAlpha = remember { Animatable(0f) }
-    val contentScale = remember { Animatable(1f) }
     var isFirstRun by remember { mutableStateOf(true) }
 
     LaunchedEffect(darkTheme) {
@@ -316,58 +316,28 @@ fun OtsoTheme(
             return@LaunchedEffect
         }
 
-        val startMs = System.currentTimeMillis()
-
         // Overlay = DESTINATION theme color: new theme "washes over" the screen.
-        // Going dark → black overlay, going light → warm-white overlay.
         overlayColor.value = if (darkTheme) OtsoColors.DarkBackground else OtsoColors.LightBackground
 
-        // Gentle fade-in — no hard flash. 90ms feels intentional, not jarring.
+        // Cover screen before the heavy recomposition fires.
         overlayAlpha.animateTo(
             targetValue = 1f,
             animationSpec = tween(durationMillis = 90, easing = OtsoMotion.easeOut),
         )
 
-        // Screen fully covered — trigger the heavy recomposition.
+        // Trigger mass recomposition while fully occluded.
         appliedDarkTheme = darkTheme
 
-        // Wait for the heavy recompose frame to start then finish.
-        withFrameNanos { }
-        withFrameNanos { }
+        // Wait for recomposition to complete — 4 frames (~67ms) gives ART
+        // enough headroom even in debug/verify mode (200-500ms recompose).
+        // The overlay hides all of this; no frame drop is visible.
+        repeat(4) { withFrameNanos { } }
 
-        // Reveal: new theme settles in with a gentle scale spring.
-        contentScale.snapTo(0.97f)
-
-        var frameCount = 0
-        var droppedFrames = 0
-        var lastFrameNs = System.nanoTime()
-
-        coroutineScope {
-            launch {
-                overlayAlpha.animateTo(
-                    targetValue = 0f,
-                    animationSpec = tween(durationMillis = 260, easing = OtsoMotion.easeOut),
-                    block = {
-                        val now = System.nanoTime()
-                        val frameMs = (now - lastFrameNs) / 1_000_000f
-                        if (frameCount > 0 && frameMs > 20f) droppedFrames++
-                        frameCount++
-                        lastFrameNs = now
-                    },
-                )
-            }
-            launch {
-                contentScale.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(durationMillis = 300, easing = OtsoMotion.easeOut),
-                )
-            }
-        }
-
-        val totalMs = System.currentTimeMillis() - startMs
-        android.util.Log.w(
-            "OtsoTheme",
-            "transition→${if (darkTheme) "dark" else "light"}: ${totalMs}ms / ${frameCount}fr / ${droppedFrames}drop",
+        // Reveal: simple fade-out only — no content layer transform.
+        // Removing contentScale eliminates compound CPU pressure during fade.
+        overlayAlpha.animateTo(
+            targetValue = 0f,
+            animationSpec = tween(durationMillis = 220, easing = OtsoMotion.easeOut),
         )
     }
 
@@ -378,14 +348,7 @@ fun OtsoTheme(
     ) {
         MaterialTheme(colorScheme = colorScheme) {
             Box(modifier = Modifier.fillMaxSize()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            scaleX = contentScale.value
-                            scaleY = contentScale.value
-                        },
-                ) {
+                Box(modifier = Modifier.fillMaxSize()) {
                     content()
                 }
                 // Overlay: alpha read in draw phase only — zero recompositions during fade.
@@ -482,7 +445,7 @@ fun rememberDynamicFontFamily(
 fun Modifier.otsoClickable(
     enabled: Boolean = true,
     interactionSource: MutableInteractionSource? = null,
-    scaleTarget: Float = 0.96f,
+    scaleTarget: Float = 0.97f,
     onClick: () -> Unit
 ): Modifier = composed {
     val internalInteractionSource = interactionSource ?: remember { MutableInteractionSource() }
@@ -497,10 +460,12 @@ fun Modifier.otsoClickable(
 
     LaunchedEffect(isPressed) {
         if (isPressed) {
-            launch { scale.animateTo(scaleTarget, spring(stiffness = Spring.StiffnessLow)) }
+            // Press: crisp, fast — no overshoot. Emil: micro-interaction ~100ms.
+            launch { scale.animateTo(scaleTarget, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 600f)) }
             pressAlpha.animateTo(0.08f, spring(stiffness = Spring.StiffnessMedium))
         } else {
-            launch { scale.animateTo(1f, spring(stiffness = Spring.StiffnessLow)) }
+            // Release: slight bounce-back — physical, satisfying.
+            launch { scale.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = 500f)) }
             pressAlpha.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
         }
     }

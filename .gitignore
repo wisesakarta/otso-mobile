@@ -32,6 +32,21 @@ app/src/androidTest/assets/ocrTesting/
 
 # Agent workspace
 .agent/
+.android-user-home/
+.claude/
+
+# Session / AI-generated documents (never committed)
+HANDOVER_*.md
+ENV_SEPARATION.md
+GOOGLE_DESIGN_AWARDS_CRITERIA.md
+technicalAgents.md
+projectContexts/
+session_device.json
+
+# Temp build & diagnostic artifacts
+build_output.txt
+editor_teardown.txt
+tmp_*.txt
 
 gradleLocal/
 .vscode/
