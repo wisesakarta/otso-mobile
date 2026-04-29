@@ -1,7 +1,10 @@
 package com.otso.app.ui.theme
 
+import android.graphics.BlurMaskFilter
+import android.graphics.Matrix as AndroidMatrix
 import android.graphics.Paint as AndroidPaint
 import android.graphics.Path as AndroidPath
+import android.graphics.RectF as AndroidRectF
 import android.graphics.RenderEffect
 import android.graphics.RenderNode
 import android.graphics.Shader
@@ -17,9 +20,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
@@ -66,10 +71,100 @@ private const val SOLID_LIGHT_SPOT_ALPHA = 0.28f
 private const val SOLID_DARK_AMBIENT_ALPHA = 0.20f
 private const val SOLID_DARK_SPOT_ALPHA = 0.40f
 
+fun Modifier.stackedShadow(shape: Shape, shadowColor: Color = Color.Black): Modifier = composed {
+    val layoutDirection = LocalLayoutDirection.current
+    drawBehind {
+        if (size.width <= 0f || size.height <= 0f) return@drawBehind
+        val outline = shape.createOutline(size, layoutDirection, this)
+
+        fun buildPath(spreadPx: Float): AndroidPath = when (outline) {
+            is Outline.Rectangle -> {
+                val r = outline.rect
+                AndroidPath().apply {
+                    addRect(
+                        r.left - spreadPx, r.top - spreadPx,
+                        r.right + spreadPx, r.bottom + spreadPx,
+                        AndroidPath.Direction.CW,
+                    )
+                }
+            }
+            is Outline.Rounded -> {
+                val rr = outline.roundRect
+                AndroidPath().apply {
+                    addRoundRect(
+                        AndroidRectF(
+                            rr.left - spreadPx, rr.top - spreadPx,
+                            rr.right + spreadPx, rr.bottom + spreadPx,
+                        ),
+                        floatArrayOf(
+                            (rr.topLeftCornerRadius.x + spreadPx).coerceAtLeast(0f),
+                            (rr.topLeftCornerRadius.y + spreadPx).coerceAtLeast(0f),
+                            (rr.topRightCornerRadius.x + spreadPx).coerceAtLeast(0f),
+                            (rr.topRightCornerRadius.y + spreadPx).coerceAtLeast(0f),
+                            (rr.bottomRightCornerRadius.x + spreadPx).coerceAtLeast(0f),
+                            (rr.bottomRightCornerRadius.y + spreadPx).coerceAtLeast(0f),
+                            (rr.bottomLeftCornerRadius.x + spreadPx).coerceAtLeast(0f),
+                            (rr.bottomLeftCornerRadius.y + spreadPx).coerceAtLeast(0f),
+                        ),
+                        AndroidPath.Direction.CW,
+                    )
+                }
+            }
+            is Outline.Generic -> AndroidPath(outline.path.asAndroidPath()).apply {
+                if (spreadPx != 0f) {
+                    val newW = (size.width + spreadPx * 2f).coerceAtLeast(0.01f)
+                    val newH = (size.height + spreadPx * 2f).coerceAtLeast(0.01f)
+                    transform(AndroidMatrix().apply {
+                        setScale(newW / size.width, newH / size.height, size.width / 2f, size.height / 2f)
+                    })
+                }
+            }
+        }
+
+        drawIntoCanvas { canvas ->
+            val native = canvas.nativeCanvas
+            val s1 = 1.dp.toPx()
+            val b2 = 2.dp.toPx(); val o2 = 1.dp.toPx()
+            val b3 = 4.dp.toPx(); val o3 = 2.dp.toPx()
+
+            // Layer 1: 1dp spread, no blur — sharp outline
+            native.drawPath(
+                buildPath(s1),
+                AndroidPaint(AndroidPaint.ANTI_ALIAS_FLAG).apply {
+                    color = shadowColor.copy(alpha = 0.06f).toArgb()
+                },
+            )
+            // Layer 2: 1dp y-offset, 2dp blur, -1dp contract
+            native.save()
+            native.translate(0f, o2)
+            native.drawPath(
+                buildPath(-s1),
+                AndroidPaint(AndroidPaint.ANTI_ALIAS_FLAG).apply {
+                    color = shadowColor.copy(alpha = 0.04f).toArgb()
+                    maskFilter = BlurMaskFilter(b2, BlurMaskFilter.Blur.NORMAL)
+                },
+            )
+            native.restore()
+            // Layer 3: 2dp y-offset, 4dp blur, 0 spread
+            native.save()
+            native.translate(0f, o3)
+            native.drawPath(
+                buildPath(0f),
+                AndroidPaint(AndroidPaint.ANTI_ALIAS_FLAG).apply {
+                    color = shadowColor.copy(alpha = 0.025f).toArgb()
+                    maskFilter = BlurMaskFilter(b3, BlurMaskFilter.Blur.NORMAL)
+                },
+            )
+            native.restore()
+        }
+    }
+}
+
 fun Modifier.otsoFloatingSolid(
     shape: Shape,
     colors: OtsoColorScheme,
     elevation: Dp = 12.dp,
+    drawBorder: Boolean = true,
 ): Modifier = composed {
     val density = LocalDensity.current
     val ambientElevationPx = with(density) { SOLID_AMBIENT_ELEVATION.toPx() }
@@ -113,8 +208,7 @@ fun Modifier.otsoFloatingSolid(
             shape = shape,
         )
         .then(
-            // Light mode micro-border: 0.5dp @ 3% black adds edge clarity on bright surfaces.
-            if (!colors.isDarkMode) Modifier.border(0.5.dp, Color(0x08000000), shape)
+            if (!colors.isDarkMode && drawBorder) Modifier.border(0.5.dp, Color(0x08000000), shape)
             else Modifier
         )
 }

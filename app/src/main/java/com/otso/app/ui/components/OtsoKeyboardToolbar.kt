@@ -30,8 +30,8 @@ import com.otso.app.ui.theme.otsoClickable
 import com.otso.app.ui.theme.OtsoTypography
 import com.otso.app.ui.theme.SquircleShape
 import com.otso.app.ui.theme.otsoFloatingSolid
+import com.otso.app.ui.theme.stackedShadow
 import com.otso.app.ui.theme.otsoColors
-import com.otso.app.ui.theme.StaggeredItem
 
 @Composable
 fun OtsoKeyboardToolbar(
@@ -57,7 +57,8 @@ fun OtsoKeyboardToolbar(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(44.dp)
-                .otsoFloatingSolid(shape = toolbarShape, colors = colors)
+                .stackedShadow(shape = toolbarShape)
+                .otsoFloatingSolid(shape = toolbarShape, colors = colors, drawBorder = false)
                 .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -71,35 +72,29 @@ fun OtsoKeyboardToolbar(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 // Scan
-                StaggeredItem(index = 3) {
-                    ToolbarButton(
-                        icon = OtsoIcons.Camera,
-                        colors = colors,
-                        modifier = Modifier.offset(y = (-0.5).dp), // Optical balance for lens position
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onScanClick()
-                        },
-                    )
-                }
+                ToolbarButton(
+                    icon = OtsoIcons.Camera,
+                    colors = colors,
+                    modifier = Modifier.offset(y = (-0.5).dp),
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onScanClick()
+                    },
+                )
 
                 // Monospace toggle
-                StaggeredItem(index = 5) {
-                    ToolbarButton(
-                        label = "M",
-                        isActive = isMonospaceActive,
-                        accent = accent,
-                        colors = colors,
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onMonospaceToggle()
-                        },
-                    )
-                }
+                ToolbarButton(
+                    label = "M",
+                    isActive = isMonospaceActive,
+                    accent = accent,
+                    colors = colors,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onMonospaceToggle()
+                    },
+                )
 
-                StaggeredItem(index = 4) {
-                    ToolbarDivider(colors)
-                }
+                ToolbarDivider(colors)
 
                 // Insert keys
                 val insertKeys = listOf(
@@ -110,51 +105,45 @@ fun OtsoKeyboardToolbar(
                     "/" to "/",
                 )
 
-                insertKeys.forEachIndexed { idx, (label, insert) ->
-                    StaggeredItem(index = 7 + idx) {
-                        ToolbarButton(
-                            label = label,
-                            colors = colors,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onKeyInsert(insert)
-                            },
-                        )
-                    }
-                }
-            }
-
-            StaggeredItem(index = 13) {
-                ToolbarDivider(colors)
-            }
-
-            // FIXED END: Find — Accent pill
-            StaggeredItem(index = 14) {
-                Box(
-                    modifier = Modifier
-                        .padding(end = 4.dp, start = 4.dp)
-                        .height(34.dp)
-                        .widthIn(min = 64.dp)
-                        .otsoClickable {
+                insertKeys.forEach { (label, insert) ->
+                    ToolbarButton(
+                        label = label,
+                        colors = colors,
+                        onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onFindClick()
-                        }
-                        .background(accent, SquircleShape(12.dp))
-                        .padding(horizontal = 14.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "find",
-                        style = OtsoTypography.uiTechnical.copy(
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
-                        ),
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
+                            onKeyInsert(insert)
+                        },
                     )
                 }
+            }
+
+            ToolbarDivider(colors)
+
+            // FIXED END: Find — Accent pill
+            Box(
+                modifier = Modifier
+                    .padding(end = 4.dp, start = 4.dp)
+                    .height(34.dp)
+                    .widthIn(min = 64.dp)
+                    .otsoClickable {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onFindClick()
+                    }
+                    .background(accent, SquircleShape(12.dp))
+                    .padding(horizontal = 14.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "find",
+                    style = OtsoTypography.uiTechnical.copy(
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
+                    ),
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                )
             }
         }
     }

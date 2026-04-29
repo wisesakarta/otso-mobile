@@ -27,6 +27,7 @@ import com.otso.app.ui.theme.otsoClickable
 import com.otso.app.ui.theme.otsoColors
 import com.otso.app.ui.theme.SquircleShape
 import com.otso.app.ui.theme.otsoFloatingSolid
+import com.otso.app.ui.theme.stackedShadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.AnimatedVisibility
@@ -86,7 +87,8 @@ fun OtsoFindBar(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp)
-            .otsoFloatingSolid(shape = toolbarShape, colors = colors)
+            .stackedShadow(shape = toolbarShape)
+            .otsoFloatingSolid(shape = toolbarShape, colors = colors, drawBorder = false)
             .padding(horizontal = 8.dp)
     ) {
         // ROW 1: Find Control
@@ -152,7 +154,7 @@ fun OtsoFindBar(
             // Counter
             val activeDisplay = if (matchCount > 0) activeMatchIndex + 1 else 0
             Text(
-                text = "[$activeDisplay/$matchCount]",
+                text = "$activeDisplay/$matchCount",
                 style = OtsoTypography.uiTechnical.copy(
                     fontWeight = FontWeight.Medium,
                     letterSpacing = 0.5.sp

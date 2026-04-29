@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import com.otso.app.logic.atomicReplaceSpans
 import com.otso.app.logic.shiftOffsets
 import com.otso.app.model.BlockType
 import com.otso.app.model.ContentBlock
@@ -277,19 +278,13 @@ class RichTextState(initialBlock: ContentBlock) {
             cursorPos = start + 1
         }
 
-        val deletedLength = end - start
-        val afterDeleteSpans = if (deletedLength > 0) {
-            block.spans.shiftOffsets(start, -deletedLength)
-        } else {
-            block.spans
-        }
-        val afterInsertSpans = afterDeleteSpans.shiftOffsets(start, insertText.length)
+        val newSpans = block.spans.atomicReplaceSpans(start, end, insertText.length)
         val newText = buildString {
             append(text, 0, start)
             append(insertText)
             append(text, end, text.length)
         }
-        block = block.copy(rawText = newText, spans = afterInsertSpans)
+        block = block.copy(rawText = newText, spans = newSpans)
         selection = TextRange(cursorPos)
     }
 
@@ -304,15 +299,8 @@ class RichTextState(initialBlock: ContentBlock) {
         val selectedRange = normalizedSelection()
         val start = selectedRange?.first ?: selection.min.coerceIn(0, text.length)
         val end = selectedRange?.second ?: selection.max.coerceIn(0, text.length)
-        val deletedLength = end - start
 
-        val afterDeleteSpans = if (deletedLength > 0) {
-            block.spans.shiftOffsets(start, -deletedLength)
-        } else {
-            block.spans
-        }
-        val afterInsertSpans = afterDeleteSpans.shiftOffsets(start, insertText.length)
-
+        val newSpans = block.spans.atomicReplaceSpans(start, end, insertText.length)
         val newText = buildString {
             append(text, 0, start)
             append(insertText)
@@ -322,7 +310,7 @@ class RichTextState(initialBlock: ContentBlock) {
 
         block = block.copy(
             rawText = newText,
-            spans = afterInsertSpans,
+            spans = newSpans,
         )
         selection = TextRange(caret)
     }

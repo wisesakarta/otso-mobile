@@ -4,6 +4,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
@@ -15,6 +20,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -55,7 +61,7 @@ import com.otso.app.ui.theme.OtsoTypography
 import com.otso.app.ui.theme.OtsoMotion
 import com.otso.app.ui.theme.rememberDynamicFontFamily
 import com.otso.app.ui.theme.otsoColors
-import com.otso.app.ui.theme.technicalGrain
+import com.otso.app.ui.theme.otsoFloatingSolid
 import com.otso.app.ui.theme.SquircleShape
 import com.otso.app.viewmodel.EditorEvent
 import com.otso.app.viewmodel.EditorViewModel
@@ -220,17 +226,40 @@ fun EditorScreen(
         staleIds.forEach { staleId -> richTextStates.remove(staleId) }
     }
 
-    LaunchedEffect(activeTab?.id, activeTab?.content, activeTab?.spans, activeVmSelection) {
+    // Content reset: fires only when actual text or spans change from an external source
+    // (e.g. file open, Find/Replace). Selection changes are intentionally excluded from
+    // the key set — they must never trigger a reset or a scroll-to-cursor jump.
+    LaunchedEffect(activeTab?.id, activeTab?.content, activeTab?.spans) {
         val tab = activeTab ?: return@LaunchedEffect
         val richTextState = activeRichTextState ?: return@LaunchedEffect
         val vmBlock = tab.toContentBlockForEditor()
-        val vmSelection = activeVmSelection ?: richTextState.selection
         val currentFlatText = richTextState.getFlatText("\n")
-        // isOwnPush: the VM content was pushed by this editor's debounce — any mismatch is just
-        // in-flight user input, not an external update. Skip reset to avoid undoing live edits.
         val isOwnPush = lastPushedContent == vmBlock.rawText
-        if (!isOwnPush && (currentFlatText != vmBlock.rawText || richTextState.selection != vmSelection)) {
-            richTextState.reset(vmBlock, vmSelection)
+        if (!isOwnPush && currentFlatText != vmBlock.rawText) {
+            richTextState.reset(vmBlock, richTextState.selection)
+        }
+    }
+
+    // Selection sync: propagates external cursor moves (Find/Replace) to the active block
+    // without triggering a full reset or recomposition-induced scroll.
+    LaunchedEffect(activeTab?.id, activeVmSelection) {
+        val vmSel = activeVmSelection ?: return@LaunchedEffect
+        val richTextState = activeRichTextState ?: return@LaunchedEffect
+        val isOwnPush = lastPushedContent == (activeTab?.content ?: "")
+        if (!isOwnPush) return@LaunchedEffect
+        val blockLen = richTextState.block.rawText.length
+        val clampedSel = androidx.compose.ui.text.TextRange(
+            vmSel.start.coerceIn(0, blockLen),
+            vmSel.end.coerceIn(0, blockLen),
+        )
+        if (richTextState.selection != clampedSel) {
+            richTextState.updateBlock(
+                richTextState.activeBlockId,
+                androidx.compose.ui.text.input.TextFieldValue(
+                    text = richTextState.block.rawText,
+                    selection = clampedSel,
+                ),
+            )
         }
     }
 
@@ -296,7 +325,6 @@ fun EditorScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(otsoColors.background)
-                .technicalGrain(alpha = 0.03f) // DNA: Technical Paper Materiality Overlay
                 .windowInsetsPadding(
                     WindowInsets.safeDrawing.only(
                         WindowInsetsSides.Top + WindowInsetsSides.Horizontal,
@@ -508,38 +536,58 @@ fun EditorScreen(
             )
         }
 
+        // Cache last non-null error so the exit animation still shows the message
+        val lastError = remember { mutableStateOf("") }
         uiState.fileAccessError?.let { error ->
+            lastError.value = error
             LaunchedEffect(error) {
                 delay(3000)
                 viewModel.clearFileAccessError()
             }
+        }
+        AnimatedVisibility(
+            visible = uiState.fileAccessError != null,
+            enter = fadeIn(spring(stiffness = 300f, dampingRatio = Spring.DampingRatioNoBouncy)) +
+                slideInVertically(spring(stiffness = 380f, dampingRatio = Spring.DampingRatioNoBouncy)) { it },
+            exit = fadeOut(tween(100)) + slideOutVertically(tween(120)) { it },
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
             Box(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .background(OtsoColors.Accent.copy(alpha = 0.08f))
                     .padding(horizontal = 20.dp, vertical = 8.dp),
             ) {
                 Text(
-                    text = error,
+                    text = lastError.value,
                     style = OtsoTypography.uiCaption,
                     color = OtsoColors.Accent,
                 )
             }
         }
 
-        if (uiState.ocr.isOcrProcessing) {
+        AnimatedVisibility(
+            visible = uiState.ocr.isOcrProcessing,
+            enter = fadeIn(spring(stiffness = 250f, dampingRatio = Spring.DampingRatioNoBouncy)),
+            exit = fadeOut(tween(durationMillis = 140)),
+        ) {
+            // Animatable card scale: graphicsLayer reads only in draw phase — zero recompositions
+            val cardScale = remember { Animatable(0.90f) }
+            LaunchedEffect(Unit) {
+                cardScale.animateTo(1f, spring(dampingRatio = 0.68f, stiffness = 460f))
+            }
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.otsoColors.background.copy(alpha = 0.72f))
+                    .background(otsoColors.background.copy(alpha = 0.72f))
                     .semantics { contentDescription = "OCR processing overlay" },
                 contentAlignment = Alignment.Center,
             ) {
                 Column(
                     modifier = Modifier
-                        .background(MaterialTheme.colorScheme.otsoColors.surface)
-                        .padding(horizontal = 24.dp, vertical = 18.dp),
+                        .graphicsLayer { scaleX = cardScale.value; scaleY = cardScale.value }
+                        .otsoFloatingSolid(shape = SquircleShape(20.dp), colors = otsoColors)
+                        .padding(horizontal = 28.dp, vertical = 20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     OtsoAsteriskLoader()
@@ -547,24 +595,33 @@ fun EditorScreen(
                     Text(
                         text = "Processing image...",
                         style = OtsoTypography.uiLabelMedium,
-                        color = MaterialTheme.colorScheme.otsoColors.ink,
+                        color = otsoColors.ink,
                     )
                 }
             }
         }
 
-        if (uiState.translation.isTranslating) {
+        AnimatedVisibility(
+            visible = uiState.translation.isTranslating,
+            enter = fadeIn(spring(stiffness = 250f, dampingRatio = Spring.DampingRatioNoBouncy)),
+            exit = fadeOut(tween(durationMillis = 140)),
+        ) {
+            val cardScale = remember { Animatable(0.90f) }
+            LaunchedEffect(Unit) {
+                cardScale.animateTo(1f, spring(dampingRatio = 0.68f, stiffness = 460f))
+            }
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.otsoColors.background.copy(alpha = 0.72f))
+                    .background(otsoColors.background.copy(alpha = 0.72f))
                     .semantics { contentDescription = "Translation processing overlay" },
                 contentAlignment = Alignment.Center,
             ) {
                 Column(
                     modifier = Modifier
-                        .background(MaterialTheme.colorScheme.otsoColors.surface)
-                        .padding(horizontal = 24.dp, vertical = 18.dp),
+                        .graphicsLayer { scaleX = cardScale.value; scaleY = cardScale.value }
+                        .otsoFloatingSolid(shape = SquircleShape(20.dp), colors = otsoColors)
+                        .padding(horizontal = 28.dp, vertical = 20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     OtsoAsteriskLoader()
@@ -572,7 +629,7 @@ fun EditorScreen(
                     Text(
                         text = "Translating...",
                         style = OtsoTypography.uiLabelMedium,
-                        color = MaterialTheme.colorScheme.otsoColors.ink,
+                        color = otsoColors.ink,
                     )
                 }
             }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,7 +29,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -89,10 +89,6 @@ fun OtsoEditor(
     scrollState: ScrollState,
     modifier: Modifier = Modifier,
 ) {
-    val docRecomp = remember { mutableIntStateOf(0) }
-    docRecomp.intValue++
-    android.util.Log.e("OtsoPerf", "[DOC_RECOMP] Root: ${docRecomp.intValue}")
-
     val colors = MaterialTheme.colorScheme.otsoColors
     val density = LocalDensity.current
     val editorTextStyle = remember(fontFamily, allowStyleSynthesis, fontSizeSp, colors.ink) {
@@ -223,10 +219,6 @@ private fun OtsoBlockNode(
     editorTextStyle: TextStyle,
     density: Density,
 ) {
-    val blockRecomp = remember { mutableIntStateOf(0) }
-    blockRecomp.intValue++
-    android.util.Log.w("OtsoPerf", "[BLOCK_RECOMP] ID: ${block.blockId.take(4)} | Count: ${blockRecomp.intValue}")
-
     var localTfv by remember(block.blockId) {
         mutableStateOf(
             TextFieldValue(
@@ -250,6 +242,9 @@ private fun OtsoBlockNode(
     }
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
     var caretRect by remember { mutableStateOf<Rect?>(null) }
+    val showPlaceholder = block.rawText.isEmpty() &&
+        state.blocks.size == 1 &&
+        state.blocks.firstOrNull()?.blockId == block.blockId
 
     LaunchedEffect(caretRect) {
         val targetRect = caretRect ?: return@LaunchedEffect
@@ -327,6 +322,14 @@ private fun OtsoBlockNode(
         },
         decorationBox = { innerTextField ->
             Box(modifier = Modifier.bringIntoViewRequester(bringIntoViewRequester)) {
+                if (showPlaceholder) {
+                    Text(
+                        text = "Start writing...",
+                        style = editorTextStyle.copy(
+                            color = colors.muted.copy(alpha = 0.28f),
+                        ),
+                    )
+                }
                 innerTextField()
             }
         },

@@ -37,7 +37,11 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import kotlinx.coroutines.launch
 import com.otso.app.R
+import com.otso.app.ui.theme.OtsoMotion
 import com.otso.app.ui.theme.OtsoSpacing
 import com.otso.app.ui.theme.OtsoTypography
 import com.otso.app.ui.theme.otsoColors
@@ -56,8 +60,10 @@ fun OtsoTabBar(
     modifier: Modifier = Modifier,
 ) {
     var dragAccumulator by remember { mutableFloatStateOf(0f) }
-    var isMenuPressed by remember { mutableStateOf(false) } 
     val otsoColors = MaterialTheme.colorScheme.otsoColors
+    val haptic = LocalHapticFeedback.current
+    val menuScale = remember { Animatable(1f) }
+    val menuBounceScope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
     val activeTab = uiState.tabs.getOrNull(uiState.activeIndex)
 
@@ -86,6 +92,7 @@ fun OtsoTabBar(
                     ) { _, dragAmount ->
                         dragAccumulator += dragAmount
                         if (dragAccumulator > 50f) {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             onSwipeDown()
                             dragAccumulator = 0f
                         }
@@ -125,80 +132,112 @@ fun OtsoTabBar(
                     modifier = Modifier.weight(1f),
                     contentAlignment = Alignment.CenterStart
                 ) {
-                    if (isEditing) {
-                        var textFieldValue by remember(uiState.editingTabIndex) {
-                            mutableStateOf(
-                                androidx.compose.ui.text.input.TextFieldValue(
-                                    text = uiState.editingTabName,
-                                    selection = androidx.compose.ui.text.TextRange(uiState.editingTabName.length)
+                    AnimatedContent(
+                        targetState = isEditing,
+                        transitionSpec = {
+                            fadeIn(tween(0)) togetherWith fadeOut(tween(0))
+                        },
+                        label = "tab_rename_toggle",
+                    ) { editing ->
+                        if (editing) {
+                            var textFieldValue by remember(uiState.editingTabIndex) {
+                                mutableStateOf(
+                                    androidx.compose.ui.text.input.TextFieldValue(
+                                        text = uiState.editingTabName,
+                                        selection = androidx.compose.ui.text.TextRange(uiState.editingTabName.length)
+                                    )
                                 )
-                            )
-                        }
-                        var hasBeenFocused by remember(uiState.editingTabIndex) { mutableStateOf(false) }
-                        
-                        LaunchedEffect(Unit) { focusRequester.requestFocus() }
-                        
-                        BasicTextField(
-                            value = textFieldValue,
-                            onValueChange = { 
-                                textFieldValue = it
-                                onRenameUpdate(it.text)
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .focusRequester(focusRequester)
-                                .onFocusChanged { focusState ->
-                                    if (focusState.isFocused) {
-                                        hasBeenFocused = true
-                                    } else if (hasBeenFocused) {
-                                        onRenameFinish()
-                                    }
+                            }
+                            var hasBeenFocused by remember(uiState.editingTabIndex) { mutableStateOf(false) }
+
+                            LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+                            BasicTextField(
+                                value = textFieldValue,
+                                onValueChange = {
+                                    textFieldValue = it
+                                    onRenameUpdate(it.text)
                                 },
-                            textStyle = OtsoTypography.uiLabelMedium.copy(color = otsoColors.ink),
-                            cursorBrush = SolidColor(Color(0XFF001AE2)), // Blueprint Blue
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(
-                                onDone = { onRenameFinish() }
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(focusRequester)
+                                    .onFocusChanged { focusState ->
+                                        if (focusState.isFocused) {
+                                            hasBeenFocused = true
+                                        } else if (hasBeenFocused) {
+                                            onRenameFinish()
+                                        }
+                                    },
+                                textStyle = OtsoTypography.uiLabelMedium.copy(color = otsoColors.ink),
+                                cursorBrush = SolidColor(Color(0XFF001AE2)),
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                keyboardActions = KeyboardActions(onDone = { onRenameFinish() }),
                             )
-                        )
-                    } else {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            Text(
-                                text = activeTab?.title ?: "Untitled",
-                                style = OtsoTypography.uiLabelMedium,
-                                color = otsoColors.ink.copy(alpha = 0.65f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false)
-                            )
-                            // Modified dot — a tiny accent circle signals unsaved changes
-                            if (activeTab?.isModified == true) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(5.dp)
-                                        .background(
-                                            Color(0xFF001AE2).copy(alpha = 0.5f),
-                                            CircleShape
-                                        )
-                                )
+                        } else {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                // Title crossfade when switching tabs
+                                AnimatedContent(
+                                    targetState = activeTab?.title ?: "Untitled",
+                                    transitionSpec = {
+                                        fadeIn(tween(110, easing = OtsoMotion.easeOut)) togetherWith
+                                            fadeOut(tween(70, easing = OtsoMotion.easeInOut))
+                                    },
+                                    modifier = Modifier.weight(1f, fill = false),
+                                    label = "tab_title_text",
+                                ) { title ->
+                                    Text(
+                                        text = title,
+                                        style = OtsoTypography.uiLabelMedium,
+                                        color = otsoColors.ink.copy(alpha = 0.65f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                                // Modified dot: bouncy spring pop-in, crisp exit
+                                AnimatedVisibility(
+                                    visible = activeTab?.isModified == true,
+                                    enter = scaleIn(
+                                        initialScale = 0f,
+                                        animationSpec = spring(dampingRatio = 0.55f, stiffness = 700f),
+                                    ) + fadeIn(spring(stiffness = 500f, dampingRatio = Spring.DampingRatioNoBouncy)),
+                                    exit = scaleOut(
+                                        targetScale = 0f,
+                                        animationSpec = tween(durationMillis = 55),
+                                    ) + fadeOut(tween(durationMillis = 55)),
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(5.dp)
+                                            .background(Color(0xFF001AE2).copy(alpha = 0.5f), CircleShape),
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
 
-            // KANAN: Counter (Only visible if tabs > 1)
+            // KANAN: Counter (Only visible if tabs > 1) — crossfade on switch
             if (uiState.tabs.size > 1) {
-                Text(
-                    text = "${uiState.activeIndex + 1}/${uiState.tabs.size}",
-                    style = OtsoTypography.uiCaption, // 11sp
-                    color = otsoColors.ink.copy(alpha = 0.35f),
-                    modifier = Modifier.padding(end = 8.dp),
-                )
+                AnimatedContent(
+                    targetState = "${uiState.activeIndex + 1}/${uiState.tabs.size}",
+                    transitionSpec = {
+                        fadeIn(tween(110, easing = OtsoMotion.easeOut)) togetherWith
+                            fadeOut(tween(70, easing = OtsoMotion.easeInOut))
+                    },
+                    label = "tab_counter",
+                ) { counter ->
+                    Text(
+                        text = counter,
+                        style = OtsoTypography.uiCaption,
+                        color = otsoColors.ink.copy(alpha = 0.35f),
+                        modifier = Modifier.padding(end = 8.dp),
+                    )
+                }
             }
 
             // KANAN: Menu trigger — The Renaissance Morph (3-Line Animated Icon)
@@ -206,16 +245,19 @@ fun OtsoTabBar(
                 modifier = Modifier
                     .size(40.dp)
                     .graphicsLayer {
-                        val scale = if (isMenuPressed) 0.95f else 1f
-                        scaleX = scale
-                        scaleY = scale
+                        scaleX = menuScale.value
+                        scaleY = menuScale.value
                     }
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onPress = {
-                                isMenuPressed = true
+                                menuBounceScope.launch {
+                                    menuScale.animateTo(0.88f, spring(stiffness = Spring.StiffnessMediumLow))
+                                }
                                 tryAwaitRelease()
-                                isMenuPressed = false
+                                menuBounceScope.launch {
+                                    menuScale.animateTo(1f, spring(dampingRatio = 0.58f, stiffness = 400f))
+                                }
                                 onMenuClick()
                             }
                         )
