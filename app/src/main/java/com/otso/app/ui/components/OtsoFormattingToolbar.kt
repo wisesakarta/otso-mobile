@@ -7,8 +7,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -113,19 +111,21 @@ fun OtsoFormattingToolbar(
                 .otsoFloatingSolid(shape = toolbarShape, colors = colors, drawBorder = false)
                 .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = if (isColorPickerVisible) Arrangement.Start else Arrangement.Center,
+            horizontalArrangement = Arrangement.Start,
         ) {
             AnimatedContent(
                 targetState = isColorPickerVisible,
                 transitionSpec = {
-                    val enterSpec = spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 340f)
-                    (fadeIn(enterSpec) + scaleIn(initialScale = 0.96f, animationSpec = enterSpec)) togetherWith
-                        (fadeOut(tween(80)) + scaleOut(targetScale = 0.96f, animationSpec = tween(80)))
+                    fadeIn(spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 400f)) togetherWith
+                        fadeOut(tween(55))
                 },
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.CenterStart,
                 label = "toolbar_mode_switch",
             ) { pickerVisible ->
                 if (pickerVisible) {
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
@@ -148,6 +148,7 @@ fun OtsoFormattingToolbar(
 
                         FormattingDivider(colors)
 
+                        // Scrollable palette — only color swatches scroll
                         Row(
                             modifier = Modifier
                                 .weight(1f)
@@ -187,28 +188,30 @@ fun OtsoFormattingToolbar(
                                     },
                                 )
                             }
-
-                            CustomColorSwatch(
-                                colors = colors,
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    onOpenColorPicker(activeHighlightHex)
-                                },
-                            )
-
-                            ClearSwatch(
-                                colors = colors,
-                                onClick = {
-                                    apply { richTextState.clearHighlight() }
-                                    isColorPickerVisible = false
-                                },
-                            )
                         }
+
+                        // Fixed actions — always visible, never scroll away
+                        FormattingDivider(colors)
+                        CustomColorSwatch(
+                            colors = colors,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onOpenColorPicker(activeHighlightHex)
+                            },
+                        )
+                        ClearSwatch(
+                            colors = colors,
+                            onClick = {
+                                apply { richTextState.clearHighlight() }
+                                isColorPickerVisible = false
+                            },
+                        )
                     }
                 } else {
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterHorizontally),
                     ) {
                         FormattingButton(
                             icon = OtsoIcons.TextB,

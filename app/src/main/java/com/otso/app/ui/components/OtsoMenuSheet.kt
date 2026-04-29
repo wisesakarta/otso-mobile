@@ -121,7 +121,7 @@ fun OtsoMenuSheet(
                     Text(
                         text = customFontName ?: "Custom",
                         style = OtsoTypography.uiTechnical,
-                        color = colors.accent,
+                        color = colors.ink.copy(alpha = 0.75f),
                     )
                     Icon(
                         imageVector = OtsoIcons.ArrowCounterClockwise,
@@ -187,7 +187,7 @@ private fun MenuTextItem(
                 Box(
                     modifier = Modifier
                         .background(
-                            color = colors.accent.copy(alpha = 0.07f),
+                            color = colors.ink.copy(alpha = 0.08f),
                             shape = RoundedCornerShape(4.dp),
                         )
                         .padding(horizontal = 5.dp, vertical = 2.dp),
@@ -195,7 +195,7 @@ private fun MenuTextItem(
                     Text(
                         text = badge,
                         style = OtsoTypography.uiCaption.copy(fontSize = 9.sp, letterSpacing = 0.3.sp),
-                        color = colors.accent.copy(alpha = 0.55f),
+                        color = colors.ink.copy(alpha = 0.50f),
                     )
                 }
             }
