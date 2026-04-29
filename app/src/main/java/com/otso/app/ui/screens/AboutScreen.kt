@@ -16,6 +16,7 @@ import com.otso.app.ui.theme.otsoColors
 import com.otso.app.ui.theme.otsoSpacing
 import com.otso.app.ui.theme.otsoTypography
 import com.otso.app.ui.theme.technicalGrain
+import com.otso.app.ui.theme.StaggeredItem
 
 /**
  * AboutScreen — The Product Manifesto.
@@ -38,20 +39,22 @@ fun AboutScreen(
             .technicalGrain(alpha = 0.03f)
             .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
-        // 1. Navigation Header (Manual Pixel Precision)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(64.dp),
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-        ) {
-            OtsoBackButton(
-                onClick = onBackClick,
-                color = otsoColors.ink
-            )
+        // 1. Navigation Header
+        StaggeredItem(index = 0) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                OtsoBackButton(
+                    onClick = onBackClick,
+                    color = otsoColors.ink
+                )
+            }
         }
 
-        // 2. Fragmented Content (Editorial Layout)
+        // 2. Content
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -59,66 +62,66 @@ fun AboutScreen(
         ) {
             Spacer(modifier = Modifier.height(48.dp))
 
-            // Logo Branding — Adaptive & Centered
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
-            ) {
-                val logoRes = if (otsoColors.isDarkMode) R.drawable.ic_otso_dark else R.drawable.ic_otso_light
-                Image(
-                    painter = painterResource(id = logoRes),
-                    contentDescription = "Otso Logo",
-                    modifier = Modifier.height(120.dp)
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Version Control (uiTechnical)
-                Text(
-                    text = "v1.0.0-rc.2",
-                    style = otsoTypography.uiTechnical.copy(letterSpacing = 0.3.sp),
-                    color = otsoColors.muted,
-                )
+            // Logo Branding
+            StaggeredItem(index = 1) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+                ) {
+                    val logoRes = if (otsoColors.isDarkMode) R.drawable.ic_otso_dark else R.drawable.ic_otso_light
+                    Image(
+                        painter = painterResource(id = logoRes),
+                        contentDescription = "Otso Logo",
+                        modifier = Modifier.height(120.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "v1.0.0-rc.2",
+                        style = otsoTypography.uiTechnical.copy(letterSpacing = 0.3.sp),
+                        color = otsoColors.muted,
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(72.dp))
 
-            // The Doctrine: "Clarity. Function. Detail."
-            Text(
-                text = "Clarity. Function.\nDetail.",
-                style = otsoTypography.uiTitleLarge.copy(
-                    lineHeight = 34.sp,
-                    letterSpacing = (-0.25).sp,
-                ),
-                color = otsoColors.ink,
-            )
+            StaggeredItem(index = 2) {
+                Text(
+                    text = "Clarity. Function.\nDetail.",
+                    style = otsoTypography.uiTitleLarge.copy(
+                        lineHeight = 34.sp,
+                        letterSpacing = (-0.25).sp,
+                    ),
+                    color = otsoColors.ink,
+                )
+            }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // The Craftsman Credit
-            Text(
-                text = "Crafted with discipline by wisesakarta",
-                style = otsoTypography.uiLabel.copy(
-                    lineHeight = 21.sp,
-                    letterSpacing = 0.1.sp,
-                ),
-                color = otsoColors.muted,
-            )
-            
+            StaggeredItem(index = 3) {
+                Text(
+                    text = "Crafted with discipline by wisesakarta",
+                    style = otsoTypography.uiLabel.copy(
+                        lineHeight = 21.sp,
+                        letterSpacing = 0.1.sp,
+                    ),
+                    color = otsoColors.muted,
+                )
+            }
+
             Spacer(modifier = Modifier.weight(1f))
 
-            // 3. Developer Signature (Natural Integration)
-            Text(
-                text = "Technical Standard",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 32.dp),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                style = otsoTypography.uiTechnical.copy(
-                    fontSize = 12.sp
-                ),
-                color = otsoColors.ink.copy(alpha = 0.4f)
-            )
+            StaggeredItem(index = 4) {
+                Text(
+                    text = "Technical Standard",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 32.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    style = otsoTypography.uiTechnical.copy(fontSize = 12.sp),
+                    color = otsoColors.ink.copy(alpha = 0.4f)
+                )
+            }
         }
 
     }

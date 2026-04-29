@@ -55,3 +55,37 @@ fun List<TextSpan>.shiftOffsets(insertIndex: Int, delta: Int): List<TextSpan> {
         }
     }
 }
+
+/**
+ * Atomically remaps span boundaries across a replace operation in a single pass.
+ *
+ * Equivalent to deleting [deleteStart, deleteEnd) then inserting [insertLen] chars at
+ * [deleteStart], but computed in one iteration so a span that exactly matches the
+ * deleted range is preserved (mapped to cover the inserted content) instead of being
+ * zeroed out and discarded by a two-step approach.
+ *
+ * Rules per boundary:
+ *   ≤ deleteStart              → unchanged (before or at the replacement anchor)
+ *   ≥ deleteEnd                → shifted by (insertLen - deletedLen)
+ *   strictly inside [del range] → clamped to deleteStart (absorbed into insertion point)
+ *   resulting zero-length span  → discarded
+ */
+fun List<TextSpan>.atomicReplaceSpans(deleteStart: Int, deleteEnd: Int, insertLen: Int): List<TextSpan> {
+    val deletedLen = deleteEnd - deleteStart
+    if (deletedLen == 0 && insertLen == 0) return this
+    val netDelta = insertLen - deletedLen
+    return mapNotNull { span ->
+        val newStart = when {
+            span.startOffset <= deleteStart -> span.startOffset
+            span.startOffset >= deleteEnd   -> span.startOffset + netDelta
+            else                            -> deleteStart
+        }
+        val newEnd = when {
+            span.endOffset <= deleteStart -> span.endOffset
+            span.endOffset >= deleteEnd   -> span.endOffset + netDelta
+            else                          -> deleteStart
+        }
+        if (newEnd <= newStart) null
+        else span.copy(startOffset = newStart, endOffset = newEnd)
+    }
+}

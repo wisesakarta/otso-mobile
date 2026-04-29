@@ -3,6 +3,8 @@ package com.otso.app.ui.components
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -10,6 +12,9 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.Stroke as DrawStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -31,7 +36,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,11 +53,11 @@ import androidx.compose.ui.unit.dp
 import com.otso.app.model.SpanStyleType
 import com.otso.app.ui.theme.OtsoColorScheme
 import com.otso.app.ui.theme.OtsoMotion
-import com.otso.app.ui.theme.OtsoTypography
 import com.otso.app.ui.theme.SquircleShape
 import com.otso.app.ui.theme.otsoClickable
 import com.otso.app.ui.theme.otsoColors
 import com.otso.app.ui.theme.otsoFloatingSolid
+import com.otso.app.ui.theme.stackedShadow
 import com.otso.app.viewmodel.RichTextState
 
 private val DefaultHighlightPalette = listOf(
@@ -105,7 +109,8 @@ fun OtsoFormattingToolbar(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(44.dp)
-                .otsoFloatingSolid(shape = toolbarShape, colors = colors)
+                .stackedShadow(shape = toolbarShape)
+                .otsoFloatingSolid(shape = toolbarShape, colors = colors, drawBorder = false)
                 .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = if (isColorPickerVisible) Arrangement.Start else Arrangement.Center,
@@ -113,16 +118,9 @@ fun OtsoFormattingToolbar(
             AnimatedContent(
                 targetState = isColorPickerVisible,
                 transitionSpec = {
-                    (fadeIn(tween(durationMillis = 160, easing = OtsoMotion.easeOut)) +
-                            scaleIn(
-                                initialScale = 0.98f,
-                                animationSpec = tween(durationMillis = 180, easing = OtsoMotion.easeOut),
-                            )) togetherWith
-                            (fadeOut(tween(durationMillis = 100, easing = OtsoMotion.easeInOut)) +
-                                    scaleOut(
-                                        targetScale = 0.98f,
-                                        animationSpec = tween(durationMillis = 120, easing = OtsoMotion.easeInOut),
-                                    ))
+                    val enterSpec = spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 340f)
+                    (fadeIn(enterSpec) + scaleIn(initialScale = 0.96f, animationSpec = enterSpec)) togetherWith
+                        (fadeOut(tween(80)) + scaleOut(targetScale = 0.96f, animationSpec = tween(80)))
                 },
                 label = "toolbar_mode_switch",
             ) { pickerVisible ->
@@ -283,12 +281,12 @@ private fun FormattingButton(
 ) {
     val iconTint by animateColorAsState(
         targetValue = if (isActive) colors.accent else colors.ink.copy(alpha = 0.65f),
-        animationSpec = tween(durationMillis = 150, easing = OtsoMotion.easeOut),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 400f),
         label = "format_icon_tint",
     )
     val activeBg by animateColorAsState(
         targetValue = if (isActive) colors.accent.copy(alpha = 0.12f) else Color.Transparent,
-        animationSpec = tween(durationMillis = 150, easing = OtsoMotion.easeOut),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 400f),
         label = "format_active_bg",
     )
 
@@ -339,21 +337,21 @@ private fun ColorSwatch(
     val isPressed by interactionSource.collectIsPressedAsState()
     val swatchScale by animateFloatAsState(
         targetValue = when {
-            isPressed -> 0.96f
-            isSelected -> 1.06f
+            isPressed -> 0.88f
+            isSelected -> 1.1f
             else -> 1f
         },
-        animationSpec = tween(durationMillis = 140, easing = OtsoMotion.easeOut),
+        animationSpec = spring(dampingRatio = 0.55f, stiffness = 600f),
         label = "swatch_scale",
     )
     val strokeWidth by animateDpAsState(
         targetValue = if (isSelected) 2.dp else 0.5.dp,
-        animationSpec = tween(durationMillis = 150, easing = OtsoMotion.easeOut),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 420f),
         label = "swatch_stroke",
     )
     val selectedRingColor by animateColorAsState(
         targetValue = if (isSelected) color.copy(alpha = 0.32f) else Color.Transparent,
-        animationSpec = tween(durationMillis = 150, easing = OtsoMotion.easeOut),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 300f),
         label = "swatch_ring_color",
     )
     val swatchModifier = Modifier.combinedClickable(
@@ -400,16 +398,17 @@ private fun CustomColorSwatch(
             .otsoClickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Box(
-            modifier = Modifier
-                .size(24.dp)
-                .border(1.2.dp, colors.edge, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "◉",
-                style = OtsoTypography.uiTechnical,
-                color = Color.Red,
+        Canvas(modifier = Modifier.size(24.dp)) {
+            val strokePx = 2.2.dp.toPx()
+            drawCircle(
+                brush = Brush.sweepGradient(
+                    colors = listOf(
+                        Color(0xFFFF3333), Color(0xFFFF9900), Color(0xFFFFEE00),
+                        Color(0xFF33CC55), Color(0xFF2288FF), Color(0xFFAA33FF), Color(0xFFFF3333),
+                    )
+                ),
+                radius = size.minDimension / 2f - strokePx / 2f,
+                style = DrawStroke(width = strokePx),
             )
         }
     }

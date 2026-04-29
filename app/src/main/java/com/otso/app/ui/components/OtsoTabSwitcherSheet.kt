@@ -9,6 +9,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Icon
@@ -17,17 +18,21 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.otso.app.ui.theme.OtsoMotion
 import com.otso.app.ui.theme.OtsoTypography
 import com.otso.app.ui.theme.otsoClickable
 import com.otso.app.ui.theme.otsoColors
-
 import com.otso.app.ui.theme.StaggeredItem
 import com.otso.app.viewmodel.EditorUiState
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun OtsoTabSwitcherSheet(
     uiState: EditorUiState,
@@ -84,7 +89,12 @@ fun OtsoTabSwitcherSheet(
                         isActive = isActive,
                         isModified = tab.isModified,
                         onClick = { onTabSwitch(index) },
-                        onClose = { onCloseTab(index) }
+                        onClose = { onCloseTab(index) },
+                        modifier = Modifier.animateItem(
+                            fadeInSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 300f),
+                            fadeOutSpec = tween(80),
+                            placementSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 380f),
+                        ),
                     )
                 }
             }
@@ -98,16 +108,41 @@ private fun TabItem(
     isActive: Boolean,
     isModified: Boolean,
     onClick: () -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme.otsoColors
-    
+    val rowBg by animateColorAsState(
+        targetValue = if (isActive) colors.accent.copy(alpha = 0.04f) else Color.Transparent,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 300f),
+        label = "tab_row_bg",
+    )
+    val indicatorScale by animateFloatAsState(
+        targetValue = if (isActive) 1f else 0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 380f),
+        label = "tab_indicator",
+    )
+
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(64.dp)
             .otsoClickable(onClick = onClick)
-            .background(if (isActive) colors.accent.copy(alpha = 0.04f) else Color.Transparent)
+            .background(rowBg)
+            .drawBehind {
+                if (indicatorScale > 0f) {
+                    val lineW = 2.5.dp.toPx()
+                    val lineH = size.height * 0.44f * indicatorScale
+                    val midY = size.height / 2f
+                    drawLine(
+                        color = colors.accent,
+                        start = Offset(lineW / 2f, midY - lineH / 2f),
+                        end = Offset(lineW / 2f, midY + lineH / 2f),
+                        strokeWidth = lineW,
+                        cap = StrokeCap.Round,
+                    )
+                }
+            }
             .padding(horizontal = 20.dp),
         contentAlignment = Alignment.CenterStart,
     ) {

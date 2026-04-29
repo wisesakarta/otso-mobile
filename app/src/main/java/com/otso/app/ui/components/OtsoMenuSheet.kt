@@ -1,7 +1,13 @@
 package com.otso.app.ui.components
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -24,7 +30,6 @@ import com.otso.app.ui.theme.OtsoSpacing
 import com.otso.app.ui.theme.OtsoTypography
 import com.otso.app.ui.theme.otsoClickable
 import com.otso.app.ui.theme.otsoColors
-import com.otso.app.ui.theme.StaggeredItem
 import com.otso.app.ui.theme.SquircleShape
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -57,82 +62,73 @@ fun OtsoMenuSheet(
             .fillMaxWidth()
             .padding(bottom = 32.dp),
     ) {
-        // Handle
-        Box(
-            modifier = Modifier
-                .padding(vertical = 12.dp)
-                .align(Alignment.CenterHorizontally)
-                .width(32.dp)
-                .height(4.dp)
-                .background(colors.edge.copy(alpha = 0.2f), RoundedCornerShape(100.dp))
-        )
-
         // Group 1 Ã¢â‚¬â€ Core Actions (Back to Flat List)
-        StaggeredItem(index = 0) { MenuTextItem("New Tab") { onNewTab(); onDismiss() } }
-        StaggeredItem(index = 1) { MenuTextItem("Open File") { onOpenFile(); onDismiss() } }
-        StaggeredItem(index = 2) { MenuTextItem("Import Image (OCR)", "experimental") { onImportImage(); onDismiss() } }
-        StaggeredItem(index = 3) { MenuTextItem("Translate (ML Kit)", "experimental") { onTranslateClick(); onDismiss() } }
-        StaggeredItem(index = 4) { MenuTextItem("Save") { onSave(); onDismiss() } }
-        StaggeredItem(index = 5) { MenuTextItem("Save As") { onSaveAs(); onDismiss() } }
+        MenuTextItem("New Tab") { onNewTab(); onDismiss() }
+        MenuTextItem("Open File") { onOpenFile(); onDismiss() }
+        MenuTextItem("Import Image (OCR)", "experimental") { onImportImage(); onDismiss() }
+        MenuTextItem("Translate (ML Kit)", "experimental") { onTranslateClick(); onDismiss() }
+        MenuTextItem("Save") { onSave(); onDismiss() }
+        MenuTextItem("Save As") { onSaveAs(); onDismiss() }
 
         Spacer(modifier = Modifier.height(8.dp))
         Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(colors.edge.copy(alpha = 0.08f)))
         Spacer(modifier = Modifier.height(8.dp))
 
         // Group 2 Ã¢â‚¬â€ Settings
-        StaggeredItem(index = 6) {
-            SettingsRow("Theme") {
-                SlidingThemeSelector(
-                    selectedMode = themeMode,
-                    onModeChange = { mode ->
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onThemeModeChange(mode)
-                    }
-                )
-            }
+        SettingsRow("Theme") {
+            SlidingThemeSelector(
+                selectedMode = themeMode,
+                onModeChange = { mode ->
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onThemeModeChange(mode)
+                }
+            )
         }
 
-        StaggeredItem(index = 7) {
-            SettingsRow("Size") {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    StepIcon(OtsoIcons.Minus) { 
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onFontSizeChange((fontSizeSp - 1).coerceIn(12, 24)) 
-                    }
-                    Text(text = "$fontSizeSp", style = OtsoTypography.uiTechnical, color = colors.ink)
-                    StepIcon(OtsoIcons.Plus) { 
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onFontSizeChange((fontSizeSp + 1).coerceIn(12, 24)) 
-                    }
+        SettingsRow("Size") {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                StepIcon(OtsoIcons.Minus) {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onFontSizeChange((fontSizeSp - 1).coerceIn(12, 24))
+                }
+                AnimatedContent(
+                    targetState = fontSizeSp,
+                    transitionSpec = {
+                        if (targetState > initialState) {
+                            slideInVertically(tween(100, easing = OtsoMotion.easeOut)) { it } +
+                                fadeIn(tween(80)) togetherWith
+                                slideOutVertically(tween(80)) { -it } + fadeOut(tween(70))
+                        } else {
+                            slideInVertically(tween(100, easing = OtsoMotion.easeOut)) { -it } +
+                                fadeIn(tween(80)) togetherWith
+                                slideOutVertically(tween(80)) { it } + fadeOut(tween(70))
+                        }
+                    },
+                    label = "font_size_counter",
+                ) { size ->
+                    Text(text = "$size", style = OtsoTypography.uiTechnical, color = colors.ink)
+                }
+                StepIcon(OtsoIcons.Plus) {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onFontSizeChange((fontSizeSp + 1).coerceIn(12, 24))
                 }
             }
         }
 
-        StaggeredItem(index = 8) {
-            SettingsRow("Typeface") {
-                if (isCustomFontLoaded) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = customFontName ?: "Custom",
-                            style = OtsoTypography.uiTechnical,
-                            color = colors.accent,
-                        )
-                        Icon(
-                            imageVector = OtsoIcons.ArrowCounterClockwise,
-                            contentDescription = "Reset",
-                            modifier = Modifier.size(16.dp).otsoClickable { onResetCustomFont() },
-                            tint = colors.muted
-                        )
-                        Box(
-                            modifier = Modifier
-                                .otsoClickable { onLoadCustomFont() }
-                                .background(colors.edge.copy(alpha = 0.08f), RoundedCornerShape(4.dp))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(text = "Set Font Folder", style = OtsoTypography.uiTechnical, color = colors.ink)
-                        }
-                    }
-                } else {
+        SettingsRow("Typeface") {
+            if (isCustomFontLoaded) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = customFontName ?: "Custom",
+                        style = OtsoTypography.uiTechnical,
+                        color = colors.accent,
+                    )
+                    Icon(
+                        imageVector = OtsoIcons.ArrowCounterClockwise,
+                        contentDescription = "Reset",
+                        modifier = Modifier.size(16.dp).otsoClickable { onResetCustomFont() },
+                        tint = colors.muted
+                    )
                     Box(
                         modifier = Modifier
                             .otsoClickable { onLoadCustomFont() }
@@ -142,6 +138,15 @@ fun OtsoMenuSheet(
                         Text(text = "Set Font Folder", style = OtsoTypography.uiTechnical, color = colors.ink)
                     }
                 }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .otsoClickable { onLoadCustomFont() }
+                        .background(colors.edge.copy(alpha = 0.08f), RoundedCornerShape(4.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(text = "Set Font Folder", style = OtsoTypography.uiTechnical, color = colors.ink)
+                }
             }
         }
 
@@ -149,10 +154,7 @@ fun OtsoMenuSheet(
         Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(colors.edge.copy(alpha = 0.08f)))
         Spacer(modifier = Modifier.height(8.dp))
 
-        // About
-        StaggeredItem(index = 9) {
-            MenuTextItem("About Otso") { onAboutClick(); onDismiss() }
-        }
+        MenuTextItem("About Otso") { onAboutClick(); onDismiss() }
     }
 }
 
@@ -182,11 +184,20 @@ private fun MenuTextItem(
                 color = colors.ink,
             )
             if (badge != null) {
-                Text(
-                    text = badge,
-                    style = OtsoTypography.uiCaption.copy(fontSize = 10.sp),
-                    color = colors.muted.copy(alpha = 0.5f),
-                )
+                Box(
+                    modifier = Modifier
+                        .background(
+                            color = colors.accent.copy(alpha = 0.07f),
+                            shape = RoundedCornerShape(4.dp),
+                        )
+                        .padding(horizontal = 5.dp, vertical = 2.dp),
+                ) {
+                    Text(
+                        text = badge,
+                        style = OtsoTypography.uiCaption.copy(fontSize = 9.sp, letterSpacing = 0.3.sp),
+                        color = colors.accent.copy(alpha = 0.55f),
+                    )
+                }
             }
         }
     }
@@ -234,12 +245,12 @@ private fun SlidingThemeSelector(
             1 -> 62.dp
             else -> 110.dp
         },
-        animationSpec = tween(durationMillis = 200, easing = OtsoMotion.easeOut),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 380f),
         label = "pill_offset"
     )
     val pillWidth by animateDpAsState(
         targetValue = if (selectedIndex == 0) 58.dp else 44.dp,
-        animationSpec = tween(durationMillis = 200, easing = OtsoMotion.easeOut),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 380f),
         label = "pill_width"
     )
 
@@ -262,7 +273,7 @@ private fun SlidingThemeSelector(
                 val isSelected = index == selectedIndex
                 val labelColor by animateColorAsState(
                     targetValue = if (isSelected) colors.ink else colors.muted,
-                    animationSpec = tween(durationMillis = 160, easing = OtsoMotion.easeOut),
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 350f),
                     label = "label_color_$index",
                 )
                 Box(
