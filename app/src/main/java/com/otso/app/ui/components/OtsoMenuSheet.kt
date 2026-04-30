@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.IntOffset
 import com.otso.app.ui.theme.OtsoMotion
 import com.otso.app.ui.theme.OtsoSpacing
 import com.otso.app.ui.theme.OtsoTypography
@@ -33,6 +34,13 @@ import com.otso.app.ui.theme.otsoColors
 import com.otso.app.ui.theme.SquircleShape
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.otso.app.ui.theme.StaggeredItem
+import com.otso.app.R
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import java.text.NumberFormat
 
 
 @Composable
@@ -52,6 +60,10 @@ fun OtsoMenuSheet(
     customFontName: String?,
     onAboutClick: () -> Unit,
     onTranslateClick: () -> Unit,
+    createdAt: Long = 0L,
+    lastModified: Long = 0L,
+    wordCount: Int = 0,
+    characterCount: Int = 0,
     onDismiss: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme.otsoColors
@@ -62,73 +74,88 @@ fun OtsoMenuSheet(
             .fillMaxWidth()
             .padding(bottom = 32.dp),
     ) {
-        // Group 1 Ã¢â‚¬â€ Core Actions (Back to Flat List)
-        MenuTextItem("New Tab") { onNewTab(); onDismiss() }
-        MenuTextItem("Open File") { onOpenFile(); onDismiss() }
-        MenuTextItem("Import Image (OCR)", "experimental") { onImportImage(); onDismiss() }
-        MenuTextItem("Translate (ML Kit)", "experimental") { onTranslateClick(); onDismiss() }
-        MenuTextItem("Save") { onSave(); onDismiss() }
-        MenuTextItem("Save As") { onSaveAs(); onDismiss() }
+        // Group 1 — Core Actions (Back to Flat List)
+        StaggeredItem(0) { MenuTextItem("New Tab") { onNewTab(); onDismiss() } }
+        StaggeredItem(1) { MenuTextItem("Open File") { onOpenFile(); onDismiss() } }
+        StaggeredItem(2) { MenuTextItem("Import Image (OCR)", "experimental") { onImportImage(); onDismiss() } }
+        StaggeredItem(3) { MenuTextItem("Translate (ML Kit)", "experimental") { onTranslateClick(); onDismiss() } }
+        StaggeredItem(4) { MenuTextItem("Save") { onSave(); onDismiss() } }
+        StaggeredItem(5) { MenuTextItem("Save As") { onSaveAs(); onDismiss() } }
 
         Spacer(modifier = Modifier.height(8.dp))
         Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(colors.edge.copy(alpha = 0.08f)))
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Group 2 Ã¢â‚¬â€ Settings
-        SettingsRow("Theme") {
-            SlidingThemeSelector(
-                selectedMode = themeMode,
-                onModeChange = { mode ->
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    onThemeModeChange(mode)
-                }
-            )
+        // Group 2 — Settings
+        StaggeredItem(6) {
+            SettingsRow("Theme") {
+                SlidingThemeSelector(
+                    selectedMode = themeMode,
+                    onModeChange = { mode ->
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onThemeModeChange(mode)
+                    }
+                )
+            }
         }
-
-        SettingsRow("Size") {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                StepIcon(OtsoIcons.Minus) {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onFontSizeChange((fontSizeSp - 1).coerceIn(12, 24))
-                }
-                AnimatedContent(
-                    targetState = fontSizeSp,
-                    transitionSpec = {
-                        if (targetState > initialState) {
-                            slideInVertically(tween(100, easing = OtsoMotion.easeOut)) { it } +
-                                fadeIn(tween(80)) togetherWith
-                                slideOutVertically(tween(80)) { -it } + fadeOut(tween(70))
-                        } else {
-                            slideInVertically(tween(100, easing = OtsoMotion.easeOut)) { -it } +
-                                fadeIn(tween(80)) togetherWith
-                                slideOutVertically(tween(80)) { it } + fadeOut(tween(70))
-                        }
-                    },
-                    label = "font_size_counter",
-                ) { size ->
-                    Text(text = "$size", style = OtsoTypography.uiTechnical, color = colors.ink)
-                }
-                StepIcon(OtsoIcons.Plus) {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onFontSizeChange((fontSizeSp + 1).coerceIn(12, 24))
+        StaggeredItem(7) {
+            SettingsRow("Size") {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    StepIcon(OtsoIcons.Minus, "Decrease Font Size") {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onFontSizeChange((fontSizeSp - 1).coerceIn(12, 24))
+                    }
+                    AnimatedContent(
+                        targetState = fontSizeSp,
+                        transitionSpec = {
+                            val springSpec = spring<IntOffset>(stiffness = 900f, dampingRatio = Spring.DampingRatioNoBouncy)
+                            if (targetState > initialState) {
+                                slideInVertically(springSpec) { it } +
+                                        fadeIn(spring(stiffness = 900f)) togetherWith
+                                        slideOutVertically(springSpec) { -it } + fadeOut(spring(stiffness = 700f))
+                            } else {
+                                slideInVertically(springSpec) { -it } +
+                                        fadeIn(spring(stiffness = 900f)) togetherWith
+                                        slideOutVertically(springSpec) { it } + fadeOut(spring(stiffness = 700f))
+                            }
+                        },
+                        label = "font_size_counter",
+                    ) { size ->
+                        Text(text = "$size", style = OtsoTypography.uiTechnical, color = colors.ink)
+                    }
+                    StepIcon(OtsoIcons.Plus, "Increase Font Size") {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onFontSizeChange((fontSizeSp + 1).coerceIn(12, 24))
+                    }
                 }
             }
         }
 
-        SettingsRow("Typeface") {
-            if (isCustomFontLoaded) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = customFontName ?: "Custom",
-                        style = OtsoTypography.uiTechnical,
-                        color = colors.ink.copy(alpha = 0.75f),
-                    )
-                    Icon(
-                        imageVector = OtsoIcons.ArrowCounterClockwise,
-                        contentDescription = "Reset",
-                        modifier = Modifier.size(16.dp).otsoClickable { onResetCustomFont() },
-                        tint = colors.muted
-                    )
+        StaggeredItem(8) {
+            SettingsRow("Typeface") {
+                if (isCustomFontLoaded) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = customFontName ?: "Custom",
+                            style = OtsoTypography.uiTechnical,
+                            color = colors.ink.copy(alpha = 0.75f),
+                        )
+                        Icon(
+                            imageVector = OtsoIcons.ArrowCounterClockwise,
+                            contentDescription = "Reset",
+                            modifier = Modifier.size(16.dp).otsoClickable { onResetCustomFont() },
+                            tint = colors.muted
+                        )
+                        Box(
+                            modifier = Modifier
+                                .otsoClickable { onLoadCustomFont() }
+                                .background(colors.edge.copy(alpha = 0.08f), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(text = "Set Font Folder", style = OtsoTypography.uiTechnical, color = colors.ink)
+                        }
+                    }
+                } else {
                     Box(
                         modifier = Modifier
                             .otsoClickable { onLoadCustomFont() }
@@ -138,15 +165,6 @@ fun OtsoMenuSheet(
                         Text(text = "Set Font Folder", style = OtsoTypography.uiTechnical, color = colors.ink)
                     }
                 }
-            } else {
-                Box(
-                    modifier = Modifier
-                        .otsoClickable { onLoadCustomFont() }
-                        .background(colors.edge.copy(alpha = 0.08f), RoundedCornerShape(4.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(text = "Set Font Folder", style = OtsoTypography.uiTechnical, color = colors.ink)
-                }
             }
         }
 
@@ -154,7 +172,27 @@ fun OtsoMenuSheet(
         Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(colors.edge.copy(alpha = 0.08f)))
         Spacer(modifier = Modifier.height(8.dp))
 
-        MenuTextItem("About Otso") { onAboutClick(); onDismiss() }
+        // Group 3 — Document Info
+        if (createdAt > 0L || lastModified > 0L) {
+            StaggeredItem(9) {
+                DocumentInfoRow("Created", formatAdaptiveDate(createdAt))
+            }
+            StaggeredItem(10) {
+                DocumentInfoRow("Modified", formatAdaptiveDate(lastModified))
+            }
+            StaggeredItem(11) {
+                DocumentInfoRow("Words", formatNumber(wordCount))
+            }
+            StaggeredItem(12) {
+                DocumentInfoRow("Characters", formatNumber(characterCount))
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(colors.edge.copy(alpha = 0.08f)))
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        StaggeredItem(11) { MenuTextItem("About Otso") { onAboutClick(); onDismiss() } }
     }
 }
 
@@ -201,6 +239,60 @@ private fun MenuTextItem(
             }
         }
     }
+}
+
+@Composable
+private fun DocumentInfoRow(
+    label: String,
+    value: String,
+) {
+    val colors = MaterialTheme.colorScheme.otsoColors
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = OtsoSpacing.globalMargin, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = label,
+            style = OtsoTypography.uiCaption,
+            color = colors.muted,
+        )
+        Text(
+            text = value,
+            style = OtsoTypography.uiCaption,
+            color = colors.ink.copy(alpha = 0.55f),
+        )
+    }
+}
+
+private fun formatAdaptiveDate(timestamp: Long): String {
+    if (timestamp <= 0L) return "—"
+    val now = Calendar.getInstance()
+    val then = Calendar.getInstance().apply { timeInMillis = timestamp }
+
+    val sameDay = now.get(Calendar.YEAR) == then.get(Calendar.YEAR) &&
+            now.get(Calendar.DAY_OF_YEAR) == then.get(Calendar.DAY_OF_YEAR)
+
+    val yesterday = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }
+    val isYesterday = yesterday.get(Calendar.YEAR) == then.get(Calendar.YEAR) &&
+            yesterday.get(Calendar.DAY_OF_YEAR) == then.get(Calendar.DAY_OF_YEAR)
+
+    val sameYear = now.get(Calendar.YEAR) == then.get(Calendar.YEAR)
+
+    val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+
+    return when {
+        sameDay -> "Today at ${timeFormat.format(Date(timestamp))}"
+        isYesterday -> "Yesterday at ${timeFormat.format(Date(timestamp))}"
+        sameYear -> SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(timestamp))
+        else -> SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date(timestamp))
+    }
+}
+
+private fun formatNumber(count: Int): String {
+    return NumberFormat.getIntegerInstance(Locale.getDefault()).format(count)
 }
 
 @Composable
@@ -307,6 +399,7 @@ private fun SlidingThemeSelector(
 @Composable
 private fun StepIcon(
     icon: ImageVector,
+    contentDescription: String?,
     onClick: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme.otsoColors
@@ -316,7 +409,7 @@ private fun StepIcon(
     ) {
         androidx.compose.material3.Icon(
             imageVector = icon,
-            contentDescription = null,
+            contentDescription = contentDescription,
             modifier = Modifier.size(16.dp),
             tint = colors.accent,
         )

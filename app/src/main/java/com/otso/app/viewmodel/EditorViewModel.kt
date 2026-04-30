@@ -104,6 +104,7 @@ data class EditorUiState(
     // False until font state is fully resolved on cold start.
     // EditorScreen uses this to suppress FOUT (Flash of Default Font).
     val isFontInitialized: Boolean = false,
+    val isFontLoading: Boolean = false,
 
  // key = tab.id
 )
@@ -541,6 +542,7 @@ class EditorViewModel(
                     content = block.rawText,
                     spans = block.spans,
                     isModified = tab.isModified || contentChanged || spansChanged,
+                    lastModified = System.currentTimeMillis(),
                 )
             }
             state.copy(textFieldValues = newValues, tabs = newTabs)
@@ -956,17 +958,44 @@ class EditorViewModel(
     }
 
     private fun migrateLoadedTab(tab: TabDocument): TabDocument {
-        val safeSpans = runCatching { tab.spans }.getOrDefault(emptyList())
+        // Gson can inject null into non-null Kotlin fields when enum names don't match
+        // or fields are missing from older session.json versions. We must sanitize BEFORE
+        // calling .copy() to prevent NullPointerException on the generated copy() method.
+        @Suppress("SENSELESS_COMPARISON")
+        val sanitized = if (
+            tab.source == null || tab.encoding == null || tab.lineEnding == null || tab.spans == null
+        ) {
+            TabDocument(
+                id = tab.id ?: java.util.UUID.randomUUID().toString(),
+                title = tab.title ?: "Untitled",
+                source = tab.source ?: com.otso.app.model.TabSource.INTERNAL,
+                uriOrPath = tab.uriOrPath,
+                content = tab.content ?: "",
+                spans = tab.spans ?: emptyList(),
+                cursorLine = tab.cursorLine,
+                cursorCol = tab.cursorCol,
+                fontSizeSp = tab.fontSizeSp,
+                encoding = tab.encoding ?: com.otso.app.model.TextEncoding.UTF8,
+                lineEnding = tab.lineEnding ?: com.otso.app.model.LineEnding.LF,
+                isModified = tab.isModified,
+                createdAt = tab.createdAt,
+                lastModified = tab.lastModified,
+            )
+        } else {
+            tab
+        }
+
+        val safeSpans = runCatching { sanitized.spans }.getOrDefault(emptyList())
         if (safeSpans.isNotEmpty()) {
-            return tab.copy(spans = safeSpans)
+            return sanitized.copy(spans = safeSpans)
         }
 
-        val migrated = tab.content.toContentBlock()
-        if (migrated.rawText == tab.content && migrated.spans.isEmpty()) {
-            return tab.copy(spans = emptyList())
+        val migrated = sanitized.content.toContentBlock()
+        if (migrated.rawText == sanitized.content && migrated.spans.isEmpty()) {
+            return sanitized.copy(spans = emptyList())
         }
 
-        return tab.copy(
+        return sanitized.copy(
             content = migrated.rawText,
             spans = migrated.spans,
         )
@@ -995,7 +1024,10 @@ class EditorViewModel(
 
     // --- CUSTOM FONT ENGINE ---
 
-    fun setFoundryFolder(uri: Uri) = fontFoundryEngine.setFoundryFolder(uri)
+    fun setFoundryFolder(uri: Uri) {
+        toggleMenu(false)
+        fontFoundryEngine.setFoundryFolder(uri)
+    }
 
     fun resetCustomFont() = fontFoundryEngine.resetCustomFont()
 
