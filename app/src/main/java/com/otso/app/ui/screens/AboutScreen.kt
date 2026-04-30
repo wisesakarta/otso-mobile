@@ -79,8 +79,15 @@ fun AboutScreen(
                         modifier = Modifier.height(48.dp)
                     )
                     Spacer(modifier = Modifier.weight(1f))
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    val versionName = try {
+                        context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "Unknown"
+                    } catch (e: Exception) {
+                        "Unknown"
+                    }
+                    
                     Text(
-                        text = "v1.0.0-rc.2",
+                        text = "v$versionName",
                         style = otsoTypography.uiTechnical.copy(letterSpacing = 0.3.sp),
                         color = otsoColors.muted,
                     )
