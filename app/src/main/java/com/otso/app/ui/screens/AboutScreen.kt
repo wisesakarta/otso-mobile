@@ -20,6 +20,7 @@ import com.otso.app.ui.theme.StaggeredItem
 import com.otso.app.ui.theme.otsoClickable
 import com.otso.app.ui.theme.SquircleShape
 import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
 
 /**
  * AboutScreen — The Product Manifesto.
@@ -65,11 +66,11 @@ fun AboutScreen(
         ) {
             Spacer(modifier = Modifier.height(48.dp))
 
-            // Logo Branding
+            // Logo & Version
             StaggeredItem(index = 1) {
-                Column(
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = androidx.compose.ui.Alignment.Start
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                 ) {
                     val logoRes = if (otsoColors.isDarkMode) R.drawable.ic_otso_dark else R.drawable.ic_otso_light
                     Image(
@@ -77,7 +78,7 @@ fun AboutScreen(
                         contentDescription = "Otso Logo",
                         modifier = Modifier.height(48.dp)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.weight(1f))
                     Text(
                         text = "v1.0.0-rc.2",
                         style = otsoTypography.uiTechnical.copy(letterSpacing = 0.3.sp),
@@ -117,13 +118,18 @@ fun AboutScreen(
             // Utility Links
             val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
             StaggeredItem(index = 4) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    UtilityCard(
+                @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    UtilityChip(
                         icon = com.otso.app.ui.components.OtsoIcons.PaperPlaneTilt,
                         label = "Send Feedback",
                         onClick = { uriHandler.openUri("mailto:feedback@wisesakarta.com") }
                     )
-                    UtilityCard(
+                    UtilityChip(
                         icon = com.otso.app.ui.components.OtsoIcons.Code,
                         label = "Source Code & Roadmap",
                         onClick = { uriHandler.openUri("https://github.com/wisesakarta") }
@@ -139,7 +145,7 @@ fun AboutScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 32.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     style = otsoTypography.uiTechnical.copy(fontSize = 12.sp),
                     color = otsoColors.ink.copy(alpha = 0.4f)
                 )
@@ -150,7 +156,7 @@ fun AboutScreen(
 }
 
 @Composable
-private fun UtilityCard(
+private fun UtilityChip(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     onClick: () -> Unit
@@ -159,10 +165,10 @@ private fun UtilityCard(
     val typography = MaterialTheme.colorScheme.otsoTypography
     Row(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .background(colors.surface, SquircleShape(16.dp))
-            .border(1.dp, colors.ink.copy(alpha = 0.06f), SquircleShape(16.dp))
+            .wrapContentWidth()
+            .height(40.dp)
+            .background(colors.surface, CircleShape)
+            .border(1.dp, colors.ink.copy(alpha = 0.06f), CircleShape)
             .otsoClickable(onClick = onClick)
             .padding(horizontal = 16.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
@@ -170,13 +176,16 @@ private fun UtilityCard(
         androidx.compose.material3.Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(16.dp),
             tint = colors.ink
         )
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = label,
-            style = typography.uiLabel.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium),
+            style = typography.uiLabel.copy(
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                fontSize = 13.sp
+            ),
             color = colors.ink
         )
     }
