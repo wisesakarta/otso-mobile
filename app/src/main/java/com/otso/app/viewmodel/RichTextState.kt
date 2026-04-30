@@ -581,15 +581,20 @@ class RichTextState(initialBlock: ContentBlock) {
     }
 
     private fun detectInlineMarkdown(text: String, cursor: Int): InlineMarkdownMatch? {
-        val prefix = text.substring(0, cursor)
+        // Optimization: Only search within the current line to prevent O(N) regex scanning on every keystroke
+        val lineStart = text.lastIndexOf('\n', cursor - 1).let { if (it < 0) 0 else it + 1 }
+        val searchChunk = text.substring(lineStart, cursor)
+        
         for (pattern in inlineMarkdownPatterns) {
-            val match = pattern.regex.find(prefix) ?: continue
+            val match = pattern.regex.find(searchChunk) ?: continue
             val tokenGroup = match.groups[1] ?: continue
             val contentGroup = match.groups[2] ?: continue
-            val tokenStart = tokenGroup.range.first
-            val tokenEndExclusive = tokenGroup.range.last + 1
-            val contentStart = contentGroup.range.first
-            val contentEndExclusive = contentGroup.range.last + 1
+            
+            // Adjust indices back to global text coordinates
+            val tokenStart = lineStart + tokenGroup.range.first
+            val tokenEndExclusive = lineStart + tokenGroup.range.last + 1
+            val contentStart = lineStart + contentGroup.range.first
+            val contentEndExclusive = lineStart + contentGroup.range.last + 1
             val openDelimiterLength = contentStart - tokenStart
             val closeDelimiterLength = tokenEndExclusive - contentEndExclusive
             if (openDelimiterLength <= 0 || closeDelimiterLength <= 0) continue
