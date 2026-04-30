@@ -137,7 +137,7 @@ fun OtsoFormattingToolbar(
                         StaggeredItem(index = 0) {
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(40.dp)
                                     .otsoClickable {
                                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         isColorPickerVisible = false
@@ -147,7 +147,7 @@ fun OtsoFormattingToolbar(
                                 Icon(
                                     imageVector = OtsoIcons.ArrowLeft,
                                     contentDescription = "Close color picker",
-                                    modifier = Modifier.size(18.dp),
+                                    modifier = Modifier.size(20.dp),
                                     tint = colors.ink.copy(alpha = 0.65f),
                                 )
                             }
@@ -305,7 +305,7 @@ private fun FormattingButton(
 
     Box(
         modifier = modifier
-            .size(36.dp)
+            .size(40.dp)
             .background(activeBg, SquircleShape(16.dp)) // Concentric Rule: Outer(20) - Padding(4) = 16
             .semantics { selected = isActive }
             .otsoClickable(onClick = onClick),
@@ -318,7 +318,7 @@ private fun FormattingButton(
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,
-                modifier = Modifier.size(if (colorSwatch != null) 16.dp else 18.dp),
+                modifier = Modifier.size(if (colorSwatch != null) 18.dp else 20.dp),
                 tint = iconTint,
             )
             if (colorSwatch != null) {
