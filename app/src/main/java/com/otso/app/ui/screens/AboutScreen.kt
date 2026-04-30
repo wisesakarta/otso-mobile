@@ -167,8 +167,8 @@ private fun UtilityChip(
         modifier = Modifier
             .wrapContentWidth()
             .height(40.dp)
-            .background(colors.surface, CircleShape)
-            .border(1.dp, colors.ink.copy(alpha = 0.06f), CircleShape)
+            .background(colors.surface, SquircleShape(12.dp))
+            .border(1.dp, colors.ink.copy(alpha = 0.06f), SquircleShape(12.dp))
             .otsoClickable(onClick = onClick)
             .padding(horizontal = 16.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
