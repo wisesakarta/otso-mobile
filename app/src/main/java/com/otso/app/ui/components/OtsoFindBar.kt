@@ -124,7 +124,7 @@ fun OtsoFindBar(
             // Expansion Toggle
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(40.dp)
                     .otsoClickable { 
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         isReplaceExpanded = !isReplaceExpanded 
@@ -135,7 +135,7 @@ fun OtsoFindBar(
                     imageVector = OtsoIcons.CaretDown,
                     contentDescription = "Expand",
                     modifier = Modifier
-                        .size(16.dp)
+                        .size(18.dp)
                         .graphicsLayer { rotationZ = rotation },
                     tint = if (isReplaceExpanded) colors.accent else colors.ink.copy(alpha = 0.4f),
                 )
@@ -259,14 +259,14 @@ private fun FindBarButton(
     val colors = MaterialTheme.colorScheme.otsoColors
     Box(
         modifier = modifier
-            .size(36.dp)
+            .size(40.dp)
             .otsoClickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(20.dp),
             tint = color ?: colors.ink.copy(alpha = 0.65f)
         )
     }

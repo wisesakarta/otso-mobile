@@ -216,7 +216,7 @@ private fun ToolbarButton(
 
     Box(
         modifier = modifier
-            .size(36.dp)
+            .size(40.dp)
             .background(
                 color = if (isActive) accent.copy(alpha = 0.12f) else Color.Transparent,
                 shape = SquircleShape(16.dp),
@@ -236,7 +236,7 @@ private fun ToolbarButton(
             Icon(
                 imageVector = icon,
                 contentDescription = null, // Handled by Box semantics
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(20.dp),
                 tint = when {
                     !enabled -> colors.muted.copy(alpha = 0.25f)
                     isActive -> accent

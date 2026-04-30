@@ -10,11 +10,11 @@ import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.unit.dp
 
 /**
- * OtsoIcons — The Phosphor Bridge.
+ * OtsoIcons â€” The Phosphor Bridge.
  * Using exact Phosphor "Regular" SVG paths mapped to Compose.
  */
 object OtsoIcons {
-    private const val STROKE_WEIGHT = 18f
+    private const val STROKE_WEIGHT = 16f
 
     val X: ImageVector get() = buildIcon("X", "M200,56 L56,200 M200,200 L56,56")
 
@@ -73,3 +73,4 @@ object OtsoIcons {
         ).build()
     }
 }
+

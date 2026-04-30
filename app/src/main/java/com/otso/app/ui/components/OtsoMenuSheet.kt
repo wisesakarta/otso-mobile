@@ -404,13 +404,13 @@ private fun StepIcon(
 ) {
     val colors = MaterialTheme.colorScheme.otsoColors
     Box(
-        modifier = Modifier.size(32.dp).otsoClickable(onClick = onClick),
+        modifier = Modifier.size(40.dp).otsoClickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         androidx.compose.material3.Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            modifier = Modifier.size(16.dp),
+            modifier = Modifier.size(20.dp),
             tint = colors.accent,
         )
     }
