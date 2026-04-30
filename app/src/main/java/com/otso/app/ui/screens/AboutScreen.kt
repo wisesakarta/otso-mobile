@@ -134,12 +134,12 @@ fun AboutScreen(
                     UtilityChip(
                         icon = com.otso.app.ui.components.OtsoIcons.PaperPlaneTilt,
                         label = "Send Feedback",
-                        onClick = { uriHandler.openUri("mailto:feedback@wisesakarta.com") }
+                        onClick = { uriHandler.openUri("mailto:otsolabs@gmail.com") }
                     )
                     UtilityChip(
                         icon = com.otso.app.ui.components.OtsoIcons.Code,
                         label = "Source Code & Roadmap",
-                        onClick = { uriHandler.openUri("https://github.com/wisesakarta") }
+                        onClick = { uriHandler.openUri("https://github.com/wisesakarta/otso-mobile.git") }
                     )
                 }
             }
