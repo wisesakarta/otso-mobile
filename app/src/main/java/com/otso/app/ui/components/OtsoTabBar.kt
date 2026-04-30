@@ -106,7 +106,9 @@ fun OtsoTabBar(
             Image(
                 painter = painterResource(id = logoRes),
                 contentDescription = null, // dekoratif, bukan aksi
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier
+                    .size(20.dp)
+                    .offset(y = (-0.5).dp), // Optical nudge: lifts identity anchor slightly
                 contentScale = ContentScale.Fit,
             )
 
@@ -135,7 +137,8 @@ fun OtsoTabBar(
                     AnimatedContent(
                         targetState = isEditing,
                         transitionSpec = {
-                            fadeIn(tween(0)) togetherWith fadeOut(tween(0))
+                            fadeIn(spring(stiffness = 900f, dampingRatio = Spring.DampingRatioNoBouncy)) togetherWith
+                                    fadeOut(spring(stiffness = 900f, dampingRatio = Spring.DampingRatioNoBouncy))
                         },
                         label = "tab_rename_toggle",
                     ) { editing ->
@@ -183,8 +186,8 @@ fun OtsoTabBar(
                                 AnimatedContent(
                                     targetState = activeTab?.title ?: "Untitled",
                                     transitionSpec = {
-                                        fadeIn(tween(110, easing = OtsoMotion.easeOut)) togetherWith
-                                            fadeOut(tween(70, easing = OtsoMotion.easeInOut))
+                                        fadeIn(spring(stiffness = 900f, dampingRatio = Spring.DampingRatioNoBouncy)) togetherWith
+                                                fadeOut(spring(stiffness = 700f, dampingRatio = Spring.DampingRatioNoBouncy))
                                     },
                                     modifier = Modifier.weight(1f, fill = false),
                                     label = "tab_title_text",
@@ -226,14 +229,16 @@ fun OtsoTabBar(
                 AnimatedContent(
                     targetState = "${uiState.activeIndex + 1}/${uiState.tabs.size}",
                     transitionSpec = {
-                        fadeIn(tween(110, easing = OtsoMotion.easeOut)) togetherWith
-                            fadeOut(tween(70, easing = OtsoMotion.easeInOut))
+                        fadeIn(spring(stiffness = 900f, dampingRatio = Spring.DampingRatioNoBouncy)) togetherWith
+                                fadeOut(spring(stiffness = 700f, dampingRatio = Spring.DampingRatioNoBouncy))
                     },
                     label = "tab_counter",
                 ) { counter ->
                     Text(
                         text = counter,
-                        style = OtsoTypography.uiCaption,
+                        style = OtsoTypography.uiCaption.copy(
+                            fontFeatureSettings = "tnum", // Prevent counter jitter
+                        ),
                         color = otsoColors.ink.copy(alpha = 0.35f),
                         modifier = Modifier.padding(end = 8.dp),
                     )

@@ -104,7 +104,7 @@ fun OtsoEditor(
     val selectionColors = remember(colors.accent) {
         TextSelectionColors(
             handleColor = colors.accent,
-            backgroundColor = colors.accent.copy(alpha = 0.45f),
+            backgroundColor = colors.accent.copy(alpha = 0.28f),
         )
     }
     val latestFontSizeSp by rememberUpdatedState(fontSizeSp)
@@ -230,12 +230,22 @@ private fun OtsoBlockNode(
     val newAnnotated = remember(block.rawText, block.spans, colors) {
         block.toAnnotatedString(colors)
     }
+    var lastActiveBlockId by remember { mutableStateOf<String?>(null) }
+    val isCurrentlyActive = state.activeBlockId == block.blockId
+    
+    if (isCurrentlyActive && lastActiveBlockId != block.blockId) {
+        val authoritative = state.getSelectionForBlock(block.blockId)
+        localTfv = localTfv.copy(selection = authoritative)
+        lastActiveBlockId = block.blockId
+    } else if (!isCurrentlyActive) {
+        lastActiveBlockId = null
+    }
+
     if (localTfv.text != block.rawText) {
+        val authoritative = state.getSelectionForBlock(block.blockId)
         localTfv = localTfv.copy(
             annotatedString = newAnnotated,
-            selection = TextRange(
-                localTfv.selection.start.coerceIn(0, newAnnotated.length)
-            ),
+            selection = authoritative,
         )
     } else if (localTfv.annotatedString != newAnnotated) {
         localTfv = localTfv.copy(annotatedString = newAnnotated)
@@ -247,8 +257,10 @@ private fun OtsoBlockNode(
         state.blocks.firstOrNull()?.blockId == block.blockId
 
     LaunchedEffect(caretRect) {
-        val targetRect = caretRect ?: return@LaunchedEffect
-        bringIntoViewRequester.bringIntoView(targetRect)
+        caretRect?.let { rect ->
+
+            bringIntoViewRequester.bringIntoView(rect)
+        }
     }
 
     BasicTextField(
@@ -307,16 +319,15 @@ private fun OtsoBlockNode(
         ),
         keyboardActions = KeyboardActions.Default,
         maxLines = Int.MAX_VALUE,
-        onTextLayout = { layoutResult ->
+        onTextLayout = { textLayoutResult ->
             if (state.activeBlockId == block.blockId) {
-                val caretOffset = localTfv.selection.end.coerceIn(0, localTfv.annotatedString.length)
-                val cursorRect = layoutResult.getCursorRect(caretOffset)
-                val comfortPadding = with(density) { 40.dp.toPx() }
-                caretRect = Rect(
+                val cursorOffset = localTfv.selection.end.coerceIn(0, localTfv.text.length)
+                val cursorRect = textLayoutResult.getCursorRect(cursorOffset)
+                caretRect = androidx.compose.ui.geometry.Rect(
                     left = cursorRect.left,
                     top = cursorRect.top,
                     right = cursorRect.right,
-                    bottom = cursorRect.bottom + comfortPadding,
+                    bottom = cursorRect.bottom
                 )
             }
         },
