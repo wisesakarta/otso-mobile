@@ -9,10 +9,14 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.animation.core.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,16 +30,24 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.navigation.NavController
 import androidx.activity.result.IntentSenderRequest
 import androidx.compose.ui.platform.LocalContext
 import android.app.Activity.RESULT_OK
+import android.app.Activity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.compose.ui.platform.LocalView
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
@@ -52,6 +64,15 @@ import com.otso.app.ui.components.OtsoKeyboardToolbar
 import com.otso.app.ui.components.OtsoColorWheelDialog
 import com.otso.app.ui.components.OtsoUnsavedDialog
 import com.otso.app.ui.components.OtsoMenuSheet
+import com.otso.app.ui.theme.OtsoSpacing
+import com.otso.app.ui.theme.otsoColors
+import com.otso.app.ui.theme.otsoSpacing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.em
 import com.otso.app.ui.components.OtsoAsteriskLoader
 import com.otso.app.ui.components.OtsoTabBar
 import com.otso.app.ui.components.OtsoTabSwitcherSheet
@@ -77,7 +98,7 @@ private fun TabDocument.toContentBlockForEditor(): ContentBlock {
     return ContentBlock(rawText = content, spans = spans)
 }
 
-@OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
+@OptIn(ExperimentalMaterial3Api::class, FlowPreview::class, ExperimentalLayoutApi::class)
 @Composable
 fun EditorScreen(
     viewModel: EditorViewModel,
@@ -141,8 +162,72 @@ fun EditorScreen(
     val activeVmSelection = activeTab?.id?.let { tabId ->
         uiState.textFieldValues[tabId]?.selection
     }
-    val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    
     val focusManager = LocalFocusManager.current
+    val view = LocalView.current
+    val isImeVisible = WindowInsets.isImeVisible
+
+    // Capture a stable status bar height ONCE before immersive mode can zero it out.
+    // This prevents layout thrashing when system bars hide/show.
+    val density = LocalDensity.current
+    val stableStatusBarHeight = remember {
+        with(density) {
+            // Use the system resource directly — this never changes with immersive mode
+            val resourceId = view.context.resources.getIdentifier("status_bar_height", "dimen", "android")
+            if (resourceId > 0) {
+                view.context.resources.getDimensionPixelSize(resourceId).toDp()
+            } else {
+                24.dp // Safe fallback
+            }
+        }
+    }
+
+    val isFocusMode by remember(isImeVisible, uiState.findReplace.isFindBarVisible, uiState.editingTabIndex) {
+        derivedStateOf { 
+            isImeVisible && !uiState.findReplace.isFindBarVisible && uiState.editingTabIndex == null
+        }
+    }
+
+    var debouncedFocusMode by remember { mutableStateOf(false) }
+    LaunchedEffect(uiState.isFontLoading) {
+        android.util.Log.i("OtsoEditor", "UI State Change: isFontLoading=${uiState.isFontLoading}")
+    }
+
+    LaunchedEffect(isFocusMode) {
+
+        if (isFocusMode) {
+            delay(350L)
+            debouncedFocusMode = true
+        } else {
+            delay(200L)
+            debouncedFocusMode = false
+        }
+    }
+
+    LaunchedEffect(debouncedFocusMode) {
+        val window = (view.context as? Activity)?.window ?: return@LaunchedEffect
+        val insetsController = WindowCompat.getInsetsController(window, view)
+        if (debouncedFocusMode) {
+            insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            insetsController.hide(WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.navigationBars())
+        } else {
+            insetsController.show(WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.navigationBars())
+        }
+    }
+
+    val focusProgress by animateFloatAsState(
+        targetValue = if (isFocusMode) 1f else 0f,
+        animationSpec = spring(stiffness = 400f),
+        label = "focus_progress"
+    )
+    
+    // Physical layout padding stays stable to avoid LazyColumn thrashing
+    // Negative offset pulls the editor up, closing the visual gap to the Focus Mode title
+    val editorVerticalOffset by animateDpAsState(
+        targetValue = if (isFocusMode) (-8).dp else 0.dp,
+        animationSpec = spring(stiffness = 400f),
+        label = "editor_offset"
+    )
     val editorScrollState: ScrollState = rememberScrollState()
     val tabSwitcherSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val menuSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -159,15 +244,15 @@ fun EditorScreen(
         label = "menu_physical_sync"
     )
     val toolbarFadeInSpec = remember {
-        tween<Float>(
-            durationMillis = 150,
-            easing = OtsoMotion.easeOut,
+        spring<Float>(
+            stiffness = 900f,
+            dampingRatio = Spring.DampingRatioNoBouncy,
         )
     }
     val toolbarFadeOutSpec = remember {
-        tween<Float>(
-            durationMillis = 120,
-            easing = OtsoMotion.easeInOut,
+        spring<Float>(
+            stiffness = 700f,
+            dampingRatio = Spring.DampingRatioNoBouncy,
         )
     }
     val toolbarSlideSpec = remember {
@@ -178,8 +263,8 @@ fun EditorScreen(
     }
     val otsoColors = MaterialTheme.colorScheme.otsoColors
 
-    LaunchedEffect(imeVisible) {
-        if (!imeVisible) {
+    LaunchedEffect(isFocusMode) {
+        if (!isFocusMode) {
             focusManager.clearFocus(force = true)
         }
     }
@@ -236,27 +321,40 @@ fun EditorScreen(
         val currentFlatText = richTextState.getFlatText("\n")
         val isOwnPush = lastPushedContent == vmBlock.rawText
         if (!isOwnPush && currentFlatText != vmBlock.rawText) {
-            richTextState.reset(vmBlock, richTextState.selection)
+            richTextState.reset(vmBlock)
         }
     }
 
-    // Selection sync: propagates external cursor moves (Find/Replace) to the active block
-    // without triggering a full reset or recomposition-induced scroll.
-    LaunchedEffect(activeTab?.id, activeVmSelection) {
+        LaunchedEffect(activeTab?.id, activeVmSelection) {
+
         val vmSel = activeVmSelection ?: return@LaunchedEffect
         val richTextState = activeRichTextState ?: return@LaunchedEffect
         val isOwnPush = lastPushedContent == (activeTab?.content ?: "")
+        
+
         if (!isOwnPush) return@LaunchedEffect
-        val blockLen = richTextState.block.rawText.length
+
+        val targetBlock = richTextState.blocks.find { it.blockId == richTextState.activeBlockId } 
+            ?: run {
+
+                return@LaunchedEffect
+            }
+            
+        val blockLen = targetBlock.rawText.length
         val clampedSel = androidx.compose.ui.text.TextRange(
             vmSel.start.coerceIn(0, blockLen),
             vmSel.end.coerceIn(0, blockLen),
         )
-        if (richTextState.selection != clampedSel) {
+        
+        val currentSel = richTextState.getSelectionForBlock(targetBlock.blockId)
+
+        
+        if (currentSel != clampedSel) {
+
             richTextState.updateBlock(
-                richTextState.activeBlockId,
+                targetBlock.blockId,
                 androidx.compose.ui.text.input.TextFieldValue(
-                    text = richTextState.block.rawText,
+                    text = targetBlock.rawText,
                     selection = clampedSel,
                 ),
             )
@@ -327,22 +425,66 @@ fun EditorScreen(
                 .background(otsoColors.background)
                 .windowInsetsPadding(
                     WindowInsets.safeDrawing.only(
-                        WindowInsetsSides.Top + WindowInsetsSides.Horizontal,
+                        WindowInsetsSides.Horizontal,
                     ),
                 )
                 .navigationBarsPadding()
                 .imePadding(),
         ) {
-            OtsoTabBar(
-                uiState = uiState,
-                menuProgress = menuProgress, // DNA: Injected physical progress
-                onMenuClick = { viewModel.toggleMenu(true) },
-                onSwipeDown = { viewModel.toggleTabSwitcher(true) },
-                onRenameStart = { index -> viewModel.startEditingTab(index) },
-                onRenameUpdate = { newName -> viewModel.updateEditingTabName(newName) },
-                onRenameCancel = { viewModel.cancelEditingTab() },
-                onRenameFinish = { viewModel.finishEditingTab() },
-            )
+            // DNA: Stable Chrome Container (Emil Design Eng)
+            // Fixed height prevents cascading layout measurements in the Editor below.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = stableStatusBarHeight)
+                    .height(OtsoSpacing.chromeBandH),
+                contentAlignment = Alignment.Center
+            ) {
+                // Layer 1: TabBar (View Mode Chrome)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            alpha = 1f - focusProgress
+                            translationY = -focusProgress * size.height * 0.25f // Subtle exit
+                        }
+                ) {
+                    OtsoTabBar(
+                        uiState = uiState,
+                        menuProgress = menuProgress,
+                        onMenuClick = { viewModel.toggleMenu(true) },
+                        onSwipeDown = { viewModel.toggleTabSwitcher(true) },
+                        onRenameStart = { index -> viewModel.startEditingTab(index) },
+                        onRenameUpdate = { newName -> viewModel.updateEditingTabName(newName) },
+                        onRenameCancel = { viewModel.cancelEditingTab() },
+                        onRenameFinish = { viewModel.finishEditingTab() },
+                    )
+                }
+
+                // Layer 2: Floating Title (Focus Mode Header)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(32.dp)
+                        .padding(horizontal = 20.dp)
+                        .padding(bottom = 2.dp) // Optical nudge to separate from content bounds
+                        .graphicsLayer {
+                            alpha = focusProgress
+                            translationY = (1f - focusProgress) * 8.dp.toPx()
+                        },
+                    contentAlignment = Alignment.BottomStart
+                ) {
+                    Text(
+                        text = activeTab?.title ?: "Untitled",
+                        style = OtsoTypography.uiCaption.copy(
+                            color = otsoColors.ink.copy(alpha = 0.32f),
+                            letterSpacing = (-0.02).em
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
 
             val customFontFamily = if (uiState.font.isMonospace) {
                 com.otso.app.ui.theme.JetBrainsMono
@@ -357,7 +499,10 @@ fun EditorScreen(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        translationY = editorVerticalOffset.toPx()
+                    },
             ) {
                 if (activeTab != null && activeRichTextState != null) {
                     OtsoEditor(
@@ -414,32 +559,32 @@ fun EditorScreen(
         }
 
         // DNA: Floating Toolbar Overlay (Emil Design Engineering)
-        // We decouple the toolbars from the main layout flow to allow for smooth 
-        // physics-based entry/exit and refined "air" (padding) above the keyboard.
-        androidx.compose.animation.AnimatedVisibility(
-            visible = imeVisible && !uiState.findReplace.isFindBarVisible,
-            enter = androidx.compose.animation.fadeIn(animationSpec = toolbarFadeInSpec) +
-                    androidx.compose.animation.slideInVertically(
-                        initialOffsetY = { it / 4 },
+        // Optimized: Decoupled from main flow to prevent layout thrashing (21 FPS Fix)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .imePadding()
+                .padding(bottom = 8.dp)
+        ) {
+            androidx.compose.animation.AnimatedVisibility(
+                visible = isFocusMode,
+                enter = androidx.compose.animation.fadeIn(animationSpec = toolbarFadeInSpec) +
+                        androidx.compose.animation.slideInVertically(
+                            initialOffsetY = { it / 3 }, // Faster, snappier slide
+                            animationSpec = toolbarSlideSpec,
+                        ),
+                exit = androidx.compose.animation.fadeOut(animationSpec = toolbarFadeOutSpec) +
+                    androidx.compose.animation.slideOutVertically(
+                        targetOffsetY = { it / 4 },
                         animationSpec = toolbarSlideSpec,
                     ),
-            exit = androidx.compose.animation.fadeOut(animationSpec = toolbarFadeOutSpec) +
-                androidx.compose.animation.slideOutVertically(
-                    targetOffsetY = { it / 6 },
-                    animationSpec = toolbarSlideSpec,
-                ),
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
-            val activeTabId = activeTab?.id
-            val hasSelection = activeRichTextState?.selection
-                ?.let { it.start != it.end } ?: false
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .imePadding()
-                    .padding(bottom = 8.dp),
             ) {
+                // Stabilize selection check to avoid mass recomposition
+                val hasSelection = remember(activeRichTextState?.selection) {
+                    activeRichTextState?.selection?.let { it.start != it.end } ?: false
+                }
+
                 if (hasSelection) {
                     OtsoFormattingToolbar(
                         richTextState = activeRichTextState!!,
@@ -459,6 +604,10 @@ fun EditorScreen(
                         onScanClick = { launchDocumentScanner() },
                         onMonospaceToggle = { viewModel.toggleMonospace() },
                         isMonospaceActive = uiState.font.isMonospace,
+                        onUndo = { activeRichTextState?.undo() },
+                        onRedo = { activeRichTextState?.redo() },
+                        canUndo = activeRichTextState?.canUndo ?: false,
+                        canRedo = activeRichTextState?.canRedo ?: false,
                     )
                 }
             }
@@ -549,7 +698,8 @@ fun EditorScreen(
             visible = uiState.fileAccessError != null,
             enter = fadeIn(spring(stiffness = 300f, dampingRatio = Spring.DampingRatioNoBouncy)) +
                 slideInVertically(spring(stiffness = 380f, dampingRatio = Spring.DampingRatioNoBouncy)) { it },
-            exit = fadeOut(tween(100)) + slideOutVertically(tween(120)) { it },
+            exit = fadeOut(spring(stiffness = Spring.StiffnessMedium)) + 
+                slideOutVertically(spring(stiffness = Spring.StiffnessMedium)) { it / 2 },
             modifier = Modifier.align(Alignment.BottomCenter),
         ) {
             Box(
@@ -566,74 +716,6 @@ fun EditorScreen(
             }
         }
 
-        AnimatedVisibility(
-            visible = uiState.ocr.isOcrProcessing,
-            enter = fadeIn(spring(stiffness = 250f, dampingRatio = Spring.DampingRatioNoBouncy)),
-            exit = fadeOut(tween(durationMillis = 140)),
-        ) {
-            // Animatable card scale: graphicsLayer reads only in draw phase — zero recompositions
-            val cardScale = remember { Animatable(0.90f) }
-            LaunchedEffect(Unit) {
-                cardScale.animateTo(1f, spring(dampingRatio = 0.68f, stiffness = 460f))
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(otsoColors.background.copy(alpha = 0.72f))
-                    .semantics { contentDescription = "OCR processing overlay" },
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .graphicsLayer { scaleX = cardScale.value; scaleY = cardScale.value }
-                        .otsoFloatingSolid(shape = SquircleShape(20.dp), colors = otsoColors)
-                        .padding(horizontal = 28.dp, vertical = 20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    OtsoAsteriskLoader()
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "Processing image...",
-                        style = OtsoTypography.uiLabelMedium,
-                        color = otsoColors.ink,
-                    )
-                }
-            }
-        }
-
-        AnimatedVisibility(
-            visible = uiState.translation.isTranslating,
-            enter = fadeIn(spring(stiffness = 250f, dampingRatio = Spring.DampingRatioNoBouncy)),
-            exit = fadeOut(tween(durationMillis = 140)),
-        ) {
-            val cardScale = remember { Animatable(0.90f) }
-            LaunchedEffect(Unit) {
-                cardScale.animateTo(1f, spring(dampingRatio = 0.68f, stiffness = 460f))
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(otsoColors.background.copy(alpha = 0.72f))
-                    .semantics { contentDescription = "Translation processing overlay" },
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .graphicsLayer { scaleX = cardScale.value; scaleY = cardScale.value }
-                        .otsoFloatingSolid(shape = SquircleShape(20.dp), colors = otsoColors)
-                        .padding(horizontal = 28.dp, vertical = 20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    OtsoAsteriskLoader()
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "Translating...",
-                        style = OtsoTypography.uiLabelMedium,
-                        color = otsoColors.ink,
-                    )
-                }
-            }
-        }
     }
 
     if (uiState.isTabSwitcherOpen) {
@@ -733,8 +815,58 @@ fun EditorScreen(
                 customFontName = uiState.activeFoundryFamilyName,
                 onAboutClick = { navController.navigate("about") },
                 onTranslateClick = { viewModel.openTranslationDialog() },
+                createdAt = uiState.tabs.getOrNull(uiState.activeIndex)?.createdAt ?: 0L,
+                lastModified = uiState.tabs.getOrNull(uiState.activeIndex)?.lastModified ?: 0L,
+                wordCount = (uiState.tabs.getOrNull(uiState.activeIndex)?.content ?: "").split("\\s+".toRegex()).count { it.isNotBlank() },
+                characterCount = (uiState.tabs.getOrNull(uiState.activeIndex)?.content ?: "").length,
                 onDismiss = { viewModel.toggleMenu(false) },
             )
+        }
+    }
+
+    // --- SYSTEM OVERLAYS (Dialog-based to ensure top-level visibility) ---
+
+    if (uiState.ocr.isOcrProcessing || uiState.translation.isTranslating || (uiState.isFontLoading && uiState.isFontInitialized)) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = {},
+            properties = androidx.compose.ui.window.DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false,
+                usePlatformDefaultWidth = false
+            )
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(otsoColors.background.copy(alpha = 0.72f)),
+                contentAlignment = Alignment.Center
+            ) {
+                val cardScale = remember { Animatable(0.90f) }
+                LaunchedEffect(Unit) {
+                    cardScale.animateTo(1f, spring(dampingRatio = 0.68f, stiffness = 460f))
+                }
+
+                Column(
+                    modifier = Modifier
+                        .graphicsLayer { scaleX = cardScale.value; scaleY = cardScale.value }
+                        .otsoFloatingSolid(shape = SquircleShape(20.dp), colors = otsoColors)
+                        .padding(horizontal = 28.dp, vertical = 20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    OtsoAsteriskLoader()
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = when {
+                            uiState.ocr.isOcrProcessing -> "Processing image..."
+                            uiState.translation.isTranslating -> "Translating..."
+                            uiState.isFontLoading -> "Loading fonts..."
+                            else -> ""
+                        },
+                        style = OtsoTypography.uiLabelMedium,
+                        color = otsoColors.ink,
+                    )
+                }
+            }
         }
     }
 }

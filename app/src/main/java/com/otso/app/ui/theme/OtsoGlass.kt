@@ -71,90 +71,90 @@ private const val SOLID_LIGHT_SPOT_ALPHA = 0.28f
 private const val SOLID_DARK_AMBIENT_ALPHA = 0.20f
 private const val SOLID_DARK_SPOT_ALPHA = 0.40f
 
-fun Modifier.stackedShadow(shape: Shape, shadowColor: Color = Color.Black): Modifier = composed {
-    val layoutDirection = LocalLayoutDirection.current
-    drawBehind {
-        if (size.width <= 0f || size.height <= 0f) return@drawBehind
-        val outline = shape.createOutline(size, layoutDirection, this)
+fun Modifier.stackedShadow(shape: Shape, shadowColor: Color = Color.Black): Modifier = drawWithCache {
+    val outline = shape.createOutline(size, layoutDirection, this)
+    val s1 = 1.dp.toPx()
+    val b2 = 2.dp.toPx()
+    val o2 = 1.dp.toPx()
+    val b3 = 4.dp.toPx()
+    val o3 = 2.dp.toPx()
 
-        fun buildPath(spreadPx: Float): AndroidPath = when (outline) {
-            is Outline.Rectangle -> {
-                val r = outline.rect
-                AndroidPath().apply {
-                    addRect(
-                        r.left - spreadPx, r.top - spreadPx,
-                        r.right + spreadPx, r.bottom + spreadPx,
-                        AndroidPath.Direction.CW,
-                    )
-                }
-            }
-            is Outline.Rounded -> {
-                val rr = outline.roundRect
-                AndroidPath().apply {
-                    addRoundRect(
-                        AndroidRectF(
-                            rr.left - spreadPx, rr.top - spreadPx,
-                            rr.right + spreadPx, rr.bottom + spreadPx,
-                        ),
-                        floatArrayOf(
-                            (rr.topLeftCornerRadius.x + spreadPx).coerceAtLeast(0f),
-                            (rr.topLeftCornerRadius.y + spreadPx).coerceAtLeast(0f),
-                            (rr.topRightCornerRadius.x + spreadPx).coerceAtLeast(0f),
-                            (rr.topRightCornerRadius.y + spreadPx).coerceAtLeast(0f),
-                            (rr.bottomRightCornerRadius.x + spreadPx).coerceAtLeast(0f),
-                            (rr.bottomRightCornerRadius.y + spreadPx).coerceAtLeast(0f),
-                            (rr.bottomLeftCornerRadius.x + spreadPx).coerceAtLeast(0f),
-                            (rr.bottomLeftCornerRadius.y + spreadPx).coerceAtLeast(0f),
-                        ),
-                        AndroidPath.Direction.CW,
-                    )
-                }
-            }
-            is Outline.Generic -> AndroidPath(outline.path.asAndroidPath()).apply {
-                if (spreadPx != 0f) {
-                    val newW = (size.width + spreadPx * 2f).coerceAtLeast(0.01f)
-                    val newH = (size.height + spreadPx * 2f).coerceAtLeast(0.01f)
-                    transform(AndroidMatrix().apply {
-                        setScale(newW / size.width, newH / size.height, size.width / 2f, size.height / 2f)
-                    })
-                }
+    val shadowPaint1 = AndroidPaint(AndroidPaint.ANTI_ALIAS_FLAG).apply {
+        color = shadowColor.copy(alpha = 0.06f).toArgb()
+    }
+    val shadowPaint2 = AndroidPaint(AndroidPaint.ANTI_ALIAS_FLAG).apply {
+        color = shadowColor.copy(alpha = 0.04f).toArgb()
+        maskFilter = BlurMaskFilter(b2, BlurMaskFilter.Blur.NORMAL)
+    }
+    val shadowPaint3 = AndroidPaint(AndroidPaint.ANTI_ALIAS_FLAG).apply {
+        color = shadowColor.copy(alpha = 0.025f).toArgb()
+        maskFilter = BlurMaskFilter(b3, BlurMaskFilter.Blur.NORMAL)
+    }
+
+    fun buildPath(spreadPx: Float): AndroidPath = when (outline) {
+        is Outline.Rectangle -> {
+            val r = outline.rect
+            AndroidPath().apply {
+                addRect(
+                    r.left - spreadPx, r.top - spreadPx,
+                    r.right + spreadPx, r.bottom + spreadPx,
+                    AndroidPath.Direction.CW,
+                )
             }
         }
+        is Outline.Rounded -> {
+            val rr = outline.roundRect
+            AndroidPath().apply {
+                addRoundRect(
+                    AndroidRectF(
+                        rr.left - spreadPx, rr.top - spreadPx,
+                        rr.right + spreadPx, rr.bottom + spreadPx,
+                    ),
+                    floatArrayOf(
+                        (rr.topLeftCornerRadius.x + spreadPx).coerceAtLeast(0f),
+                        (rr.topLeftCornerRadius.y + spreadPx).coerceAtLeast(0f),
+                        (rr.topRightCornerRadius.x + spreadPx).coerceAtLeast(0f),
+                        (rr.topRightCornerRadius.y + spreadPx).coerceAtLeast(0f),
+                        (rr.bottomRightCornerRadius.x + spreadPx).coerceAtLeast(0f),
+                        (rr.bottomRightCornerRadius.y + spreadPx).coerceAtLeast(0f),
+                        (rr.bottomLeftCornerRadius.x + spreadPx).coerceAtLeast(0f),
+                        (rr.bottomLeftCornerRadius.y + spreadPx).coerceAtLeast(0f),
+                    ),
+                    AndroidPath.Direction.CW,
+                )
+            }
+        }
+        is Outline.Generic -> AndroidPath(outline.path.asAndroidPath()).apply {
+            if (spreadPx != 0f) {
+                val newW = (size.width + spreadPx * 2f).coerceAtLeast(0.01f)
+                val newH = (size.height + spreadPx * 2f).coerceAtLeast(0.01f)
+                transform(AndroidMatrix().apply {
+                    setScale(newW / size.width, newH / size.height, size.width / 2f, size.height / 2f)
+                })
+            }
+        }
+    }
 
+    val path1 = buildPath(s1)
+    val path2 = buildPath(-s1)
+    val path3 = buildPath(0f)
+
+    onDrawBehind {
         drawIntoCanvas { canvas ->
             val native = canvas.nativeCanvas
-            val s1 = 1.dp.toPx()
-            val b2 = 2.dp.toPx(); val o2 = 1.dp.toPx()
-            val b3 = 4.dp.toPx(); val o3 = 2.dp.toPx()
+            // Layer 1: Sharp outline
+            native.drawPath(path1, shadowPaint1)
 
-            // Layer 1: 1dp spread, no blur — sharp outline
-            native.drawPath(
-                buildPath(s1),
-                AndroidPaint(AndroidPaint.ANTI_ALIAS_FLAG).apply {
-                    color = shadowColor.copy(alpha = 0.06f).toArgb()
-                },
-            )
-            // Layer 2: 1dp y-offset, 2dp blur, -1dp contract
+            // Layer 2: Medium blur
             native.save()
             native.translate(0f, o2)
-            native.drawPath(
-                buildPath(-s1),
-                AndroidPaint(AndroidPaint.ANTI_ALIAS_FLAG).apply {
-                    color = shadowColor.copy(alpha = 0.04f).toArgb()
-                    maskFilter = BlurMaskFilter(b2, BlurMaskFilter.Blur.NORMAL)
-                },
-            )
+            native.drawPath(path2, shadowPaint2)
             native.restore()
-            // Layer 3: 2dp y-offset, 4dp blur, 0 spread
+
+            // Layer 3: Soft blur
             native.save()
             native.translate(0f, o3)
-            native.drawPath(
-                buildPath(0f),
-                AndroidPaint(AndroidPaint.ANTI_ALIAS_FLAG).apply {
-                    color = shadowColor.copy(alpha = 0.025f).toArgb()
-                    maskFilter = BlurMaskFilter(b3, BlurMaskFilter.Blur.NORMAL)
-                },
-            )
+            native.drawPath(path3, shadowPaint3)
             native.restore()
         }
     }
@@ -302,6 +302,12 @@ fun Modifier.otsoFloatingGlass(
                     color = palette.outerStructuralEdge,
                     insetPx = GLASS_STRUCTURAL_EDGE_INSET_PX,
                 )
+                // NEW: Specular Rim Highlight (Top-Left Specular Edge)
+                drawRimSpecularHighlight(
+                    outline = outline,
+                    color = if (colors.isDarkMode) Color.White.copy(alpha = 0.32f) else Color.White.copy(alpha = 0.82f),
+                    strokeWidthPx = 0.5.dp.toPx()
+                )
             }
         }
 }
@@ -325,41 +331,47 @@ private fun rememberGlassPalette(isDarkMode: Boolean): GlassPalette {
         GlassPalette(
             fillBrush = Brush.verticalGradient(
                 colorStops = arrayOf(
-                    0.0f to Color(0xFF2A303A).copy(alpha = 0.40f),
-                    0.52f to Color(0xFF1A202A).copy(alpha = 0.34f),
-                    1.0f to Color(0xFF10151D).copy(alpha = 0.28f),
+                    0.00f to Color(0xFF2A303A).copy(alpha = 0.42f),
+                    0.22f to Color(0xFF242A35).copy(alpha = 0.38f),
+                    0.44f to Color(0xFF1E242F).copy(alpha = 0.35f),
+                    0.66f to Color(0xFF181E28).copy(alpha = 0.32f),
+                    0.88f to Color(0xFF121822).copy(alpha = 0.30f),
+                    1.00f to Color(0xFF10151D).copy(alpha = 0.28f),
                 ),
             ),
-            backdropTintColor = Color(0xFF1A2330).copy(alpha = 0.22f),
-            outerStructuralEdge = Color.White.copy(alpha = 0.10f),
-            innerEdgeLight = Color.White.copy(alpha = 0.22f),
-            innerEdgeDark = Color.Black.copy(alpha = 0.34f),
-            topSheen = Color.White.copy(alpha = 0.16f),
-            animatedSheen = Color.White.copy(alpha = 0.08f),
-            bottomShade = Color.Black.copy(alpha = 0.16f),
+            backdropTintColor = Color(0xFF1A2330).copy(alpha = 0.24f),
+            outerStructuralEdge = Color.White.copy(alpha = 0.12f),
+            innerEdgeLight = Color.White.copy(alpha = 0.25f),
+            innerEdgeDark = Color.Black.copy(alpha = 0.38f),
+            topSheen = Color.White.copy(alpha = 0.18f),
+            animatedSheen = Color.White.copy(alpha = 0.10f),
+            bottomShade = Color.Black.copy(alpha = 0.18f),
             edgeGlow = Color.White.copy(alpha = 0.08f),
-            shadowAmbient = Color.Black.copy(alpha = 0.58f),
-            shadowSpot = Color.Black.copy(alpha = 0.42f),
+            shadowAmbient = Color.Black.copy(alpha = 0.62f),
+            shadowSpot = Color.Black.copy(alpha = 0.45f),
         )
     } else {
         GlassPalette(
             fillBrush = Brush.verticalGradient(
                 colorStops = arrayOf(
-                    0.0f to Color.White.copy(alpha = 0.50f),
-                    0.52f to Color(0xFFF7FAFF).copy(alpha = 0.46f),
-                    1.0f to Color(0xFFEAF0F8).copy(alpha = 0.40f),
+                    0.00f to Color.White.copy(alpha = 0.52f),
+                    0.22f to Color(0xFFFAFBFF).copy(alpha = 0.50f),
+                    0.44f to Color(0xFFF5F8FF).copy(alpha = 0.48f),
+                    0.66f to Color(0xFFEFF3FF).copy(alpha = 0.45f),
+                    0.88f to Color(0xFFEAF0F8).copy(alpha = 0.42f),
+                    1.00f to Color(0xFFE4EBF5).copy(alpha = 0.38f),
                 ),
             ),
-            backdropTintColor = Color(0xFFE7EEF8).copy(alpha = 0.36f),
-            outerStructuralEdge = Color.Black.copy(alpha = 0.10f),
-            innerEdgeLight = Color.White.copy(alpha = 0.72f),
-            innerEdgeDark = Color.Black.copy(alpha = 0.14f),
-            topSheen = Color.White.copy(alpha = 0.45f),
-            animatedSheen = Color.White.copy(alpha = 0.12f),
-            bottomShade = Color.Black.copy(alpha = 0.06f),
-            edgeGlow = Color.White.copy(alpha = 0.16f),
-            shadowAmbient = Color.Black.copy(alpha = 0.14f),
-            shadowSpot = Color.Black.copy(alpha = 0.09f),
+            backdropTintColor = Color(0xFFE7EEF8).copy(alpha = 0.38f),
+            outerStructuralEdge = Color.Black.copy(alpha = 0.12f),
+            innerEdgeLight = Color.White.copy(alpha = 0.78f),
+            innerEdgeDark = Color.Black.copy(alpha = 0.16f),
+            topSheen = Color.White.copy(alpha = 0.48f),
+            animatedSheen = Color.White.copy(alpha = 0.14f),
+            bottomShade = Color.Black.copy(alpha = 0.08f),
+            edgeGlow = Color.White.copy(alpha = 0.18f),
+            shadowAmbient = Color.Black.copy(alpha = 0.16f),
+            shadowSpot = Color.Black.copy(alpha = 0.11f),
         )
     }
 }
@@ -486,6 +498,35 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawInnerEdge(
         bottom = size.height,
     ) {
         drawOutlineWithColor(outline = outline, color = bottomRightColor, style = style)
+    }
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRimSpecularHighlight(
+    outline: Outline,
+    color: Color,
+    strokeWidthPx: Float,
+) {
+    // Specular highlight restricted to Top and Left edges
+    val style = Stroke(width = strokeWidthPx)
+    
+    // Top Edge
+    clipRect(
+        left = 0f,
+        top = 0f,
+        right = size.width,
+        bottom = strokeWidthPx * 4f, // Narrow band
+    ) {
+        drawOutlineWithColor(outline = outline, color = color, style = style)
+    }
+    
+    // Left Edge
+    clipRect(
+        left = 0f,
+        top = 0f,
+        right = strokeWidthPx * 4f, // Narrow band
+        bottom = size.height,
+    ) {
+        drawOutlineWithColor(outline = outline, color = color, style = style)
     }
 }
 
