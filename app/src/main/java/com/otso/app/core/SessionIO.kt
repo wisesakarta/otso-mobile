@@ -28,7 +28,9 @@ class SessionIO(
                 activeIndex = state.activeIndex,
                 isDarkMode = state.isDarkMode,
             )
-            sessionFile.writeText(gson.toJson(payload))
+            sessionFile.writer().use { writer ->
+                gson.toJson(payload, writer)
+            }
         }
     }
 
@@ -37,7 +39,9 @@ class SessionIO(
             if (!sessionFile.exists()) return@withContext null
             runCatching {
                 val type = object : TypeToken<SessionData>() {}.type
-                val data = gson.fromJson<SessionData>(sessionFile.readText(), type)
+                val data = sessionFile.reader().use { reader ->
+                    gson.fromJson<SessionData>(reader, type)
+                }
                 // Guard against Gson returning LinkedTreeMap elements when generic type
                 // info is corrupted by R8 — discard any session that can't be used safely.
                 if (data?.tabs?.any { it !is TabDocument } == true) null else data

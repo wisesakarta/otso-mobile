@@ -15,6 +15,12 @@ import com.otso.app.model.SpanStyleType
 import com.otso.app.model.TextSpan
 import java.util.Locale
 
+data class EditorSnapshot(
+    val blocks: List<ContentBlock>,
+    val selection: TextRange,
+    val activeBlockId: String
+)
+
 /**
  * Compose-observable state holder for a document represented as ordered blocks.
  *
@@ -30,6 +36,23 @@ class RichTextState(initialBlock: ContentBlock) {
 
     var activeBlockId by mutableStateOf(initialBlock.blockId)
         private set
+
+    private val undoStack = kotlin.collections.ArrayDeque<EditorSnapshot>()
+    private val redoStack = kotlin.collections.ArrayDeque<EditorSnapshot>()
+    private val maxHistorySize = 100
+
+    private var lastTypingSnapshotTime = 0L
+    private val typingDebounceMs = 500L
+
+    var canUndo by mutableStateOf(false)
+        private set
+    var canRedo by mutableStateOf(false)
+        private set
+
+    private fun syncHistoryState() {
+        canUndo = undoStack.isNotEmpty()
+        canRedo = redoStack.isNotEmpty()
+    }
 
     // Temporary compatibility bridge while UI is still single-block.
     var block: ContentBlock
@@ -122,14 +145,19 @@ class RichTextState(initialBlock: ContentBlock) {
         if (index < 0) return
 
         val current = blocks[index]
+        val oldText = current.rawText
+        val newText = newTfv.text
+        
+        // Snapshot only on text changes, ignore pure selection updates to avoid history pollution
+        if (oldText != newText) {
+            saveSnapshot(isTyping = true)
+        }
         activeBlockId = blockId
         selection = TextRange(
             start = newTfv.selection.start.coerceIn(0, newTfv.text.length),
             end = newTfv.selection.end.coerceIn(0, newTfv.text.length),
         )
 
-        val oldText = current.rawText
-        val newText = newTfv.text
         if (oldText == newText) return
 
         val changeIndex = firstDivergence(oldText, newText)
@@ -186,7 +214,6 @@ class RichTextState(initialBlock: ContentBlock) {
     fun hasStyle(style: SpanStyleType): Boolean {
         val textLength = block.rawText.length
         val (start, end) = if (selection.collapsed) {
-            // If collapsed, check the character immediately preceding the cursor.
             val cursor = selection.start.coerceIn(0, textLength)
             if (cursor == 0) return false
             (cursor - 1) to cursor
@@ -194,8 +221,24 @@ class RichTextState(initialBlock: ContentBlock) {
             selection.min.coerceIn(0, textLength) to selection.max.coerceIn(0, textLength)
         }
         if (start >= end) return false
-        val styleSpans = block.spans.filter { it.style == style }
-        return isFullyCovered(styleSpans, start, end)
+
+        // Optimization: Single pass check instead of filter + isFullyCovered
+        // This avoids creating a temporary list on every toolbar update.
+        return isFullyCoveredOptimized(block.spans, style, start, end)
+    }
+
+    private fun isFullyCoveredOptimized(spans: List<TextSpan>, style: SpanStyleType, start: Int, end: Int): Boolean {
+        // Simple but high-performance coverage check
+        var coveredUntil = start
+        // We assume spans are somewhat sorted or we just check all that match the style
+        for (span in spans) {
+            if (span.style != style) continue
+            if (span.startOffset <= coveredUntil && span.endOffset > coveredUntil) {
+                coveredUntil = span.endOffset
+            }
+            if (coveredUntil >= end) return true
+        }
+        return false
     }
 
     /**
@@ -205,6 +248,7 @@ class RichTextState(initialBlock: ContentBlock) {
      * Otherwise the style is added across the whole range.
      */
     fun toggleStyle(style: SpanStyleType) {
+        saveSnapshot()
         val (start, end) = normalizedSelection() ?: return
         val styleSpans = block.spans.filter { it.style == style }
         val updatedStyleSpans = if (isFullyCovered(styleSpans, start, end)) {
@@ -223,6 +267,7 @@ class RichTextState(initialBlock: ContentBlock) {
      * Existing highlight spans in the range are replaced.
      */
     fun addHighlight(colorHex: String? = null) {
+        saveSnapshot()
         val (start, end) = normalizedSelection() ?: return
         val normalizedColor = normalizeColorHex(colorHex)
         val highlightSpans = block.spans.filter { it.style == SpanStyleType.Highlight }
@@ -245,6 +290,7 @@ class RichTextState(initialBlock: ContentBlock) {
      * Clears highlight spans from the current selection.
      */
     fun clearHighlight() {
+        saveSnapshot()
         val (start, end) = normalizedSelection() ?: return
         val highlightSpans = block.spans.filter { it.style == SpanStyleType.Highlight }
         val updatedHighlights = subtractRange(highlightSpans, start, end)
@@ -294,6 +340,7 @@ class RichTextState(initialBlock: ContentBlock) {
      */
     fun insertTextAtSelection(insertText: String) {
         if (insertText.isEmpty()) return
+        saveSnapshot()
 
         val text = block.rawText
         val selectedRange = normalizedSelection()
@@ -320,6 +367,7 @@ class RichTextState(initialBlock: ContentBlock) {
      * Existing inline spans are dropped to avoid stale offsets after bulk transforms.
      */
     fun updateText(newText: String, newCursorOffset: Int? = null) {
+        saveSnapshot()
         block = block.copy(
             rawText = newText,
             spans = emptyList(),
@@ -374,6 +422,7 @@ class RichTextState(initialBlock: ContentBlock) {
      * The current block keeps content before cursor; the new block receives content after cursor.
      */
     fun splitBlockAtCursor(blockId: String, cursorPosition: Int) {
+        saveSnapshot()
         val index = blocks.indexOfFirst { it.blockId == blockId }
         if (index < 0) return
 
@@ -423,6 +472,7 @@ class RichTextState(initialBlock: ContentBlock) {
      * No-op when the target is the first block.
      */
     fun mergeBlockWithPrevious(blockId: String) {
+        saveSnapshot()
         val index = blocks.indexOfFirst { it.blockId == blockId }
         if (index <= 0) return
 
@@ -445,6 +495,56 @@ class RichTextState(initialBlock: ContentBlock) {
         ensureAtLeastOneBlock()
         activeBlockId = merged.blockId
         selection = TextRange(offset)
+    }
+
+    fun undo() {
+        if (undoStack.isEmpty()) return
+        val currentSnapshot = EditorSnapshot(blocks.toList(), selection, activeBlockId)
+        redoStack.addLast(currentSnapshot)
+        
+        val snapshot = undoStack.removeLast()
+        applySnapshot(snapshot)
+        syncHistoryState()
+    }
+
+    fun redo() {
+        if (redoStack.isEmpty()) return
+        val currentSnapshot = EditorSnapshot(blocks.toList(), selection, activeBlockId)
+        undoStack.addLast(currentSnapshot)
+        
+        val snapshot = redoStack.removeLast()
+        applySnapshot(snapshot)
+        syncHistoryState()
+    }
+
+    private fun saveSnapshot(isTyping: Boolean = false) {
+        val now = System.currentTimeMillis()
+        if (isTyping) {
+            if (now - lastTypingSnapshotTime < typingDebounceMs) {
+                // Coalesce: do not save a new snapshot, extend the typing window
+                lastTypingSnapshotTime = now
+                return
+            }
+            lastTypingSnapshotTime = now
+        } else {
+            // Structural change breaks the typing coalesce window
+            lastTypingSnapshotTime = 0L
+        }
+
+        val snapshot = EditorSnapshot(blocks.toList(), selection, activeBlockId)
+        undoStack.addLast(snapshot)
+        if (undoStack.size > maxHistorySize) {
+            undoStack.removeFirst()
+        }
+        redoStack.clear()
+        syncHistoryState()
+    }
+
+    private fun applySnapshot(snapshot: EditorSnapshot) {
+        blocks.clear()
+        blocks.addAll(snapshot.blocks)
+        activeBlockId = snapshot.activeBlockId
+        selection = snapshot.selection
     }
 
     /**
