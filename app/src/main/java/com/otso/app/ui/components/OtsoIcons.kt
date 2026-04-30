@@ -56,6 +56,8 @@ object OtsoIcons {
 
     val Highlighter: ImageVector get() = buildIcon("Highlighter", "M88,128 L24,192 L96,216 L136,176 M184,160l-26.34,26.34a8,8,0,0,1-11.32,0L77.66,117.66a8,8,0,0,1,0-11.32L104,80 M248,112l-50.34,50.34a8,8,0,0,1-11.32,0L101.66,77.66a8,8,0,0,1,0-11.32L152,16")
 
+    val PaperPlaneTilt: ImageVector get() = buildIcon("PaperPlaneTilt", "M210.3,35.9L23.9,88.4a8,8,0,0,0-1.2,15l85.6,40.5a7.8,7.8,0,0,1,3.8,3.8l40.5,85.6a8,8,0,0,0,15-1.2L220.1,45.7A7.9,7.9,0,0,0,210.3,35.9ZM115.5,140.5,160,96")
+
     private fun buildIcon(iconName: String, pathData: String): ImageVector {
         return ImageVector.Builder(
             name = "OtsoIcons." + iconName,
