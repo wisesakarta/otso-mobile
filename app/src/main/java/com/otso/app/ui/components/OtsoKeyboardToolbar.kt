@@ -26,12 +26,15 @@ import androidx.compose.animation.core.*
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import com.otso.app.ui.theme.otsoClickable
 import com.otso.app.ui.theme.OtsoTypography
 import com.otso.app.ui.theme.SquircleShape
 import com.otso.app.ui.theme.otsoFloatingSolid
 import com.otso.app.ui.theme.stackedShadow
 import com.otso.app.ui.theme.otsoColors
+import com.otso.app.ui.theme.StaggeredItem
 
 @Composable
 fun OtsoKeyboardToolbar(
@@ -40,6 +43,10 @@ fun OtsoKeyboardToolbar(
     onScanClick: () -> Unit,
     onMonospaceToggle: () -> Unit,
     isMonospaceActive: Boolean = false,
+    onUndo: () -> Unit = {},
+    onRedo: () -> Unit = {},
+    canUndo: Boolean = false,
+    canRedo: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme.otsoColors
@@ -71,28 +78,65 @@ fun OtsoKeyboardToolbar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                // Undo
+                StaggeredItem(index = 0) {
+                    ToolbarButton(
+                        icon = OtsoIcons.Undo,
+                        contentDescription = "Undo",
+                        enabled = canUndo,
+                        colors = colors,
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onUndo()
+                        },
+                    )
+                }
+
+                // Redo
+                StaggeredItem(index = 1) {
+                    ToolbarButton(
+                        icon = OtsoIcons.Redo,
+                        contentDescription = "Redo",
+                        enabled = canRedo,
+                        colors = colors,
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onRedo()
+                        },
+                    )
+                }
+
+                ToolbarDivider(colors)
+
                 // Scan
-                ToolbarButton(
-                    icon = OtsoIcons.Camera,
-                    colors = colors,
-                    modifier = Modifier.offset(y = (-0.5).dp),
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onScanClick()
-                    },
-                )
+                StaggeredItem(index = 2) {
+                    ToolbarButton(
+                        icon = OtsoIcons.Camera,
+                        contentDescription = "Scan Document",
+                        colors = colors,
+                        modifier = Modifier.offset(y = (-0.5).dp),
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onScanClick()
+                        },
+                    )
+                }
 
                 // Monospace toggle
-                ToolbarButton(
-                    label = "M",
-                    isActive = isMonospaceActive,
-                    accent = accent,
-                    colors = colors,
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onMonospaceToggle()
-                    },
-                )
+                StaggeredItem(index = 3) {
+                    ToolbarButton(
+                        label = "M",
+                        contentDescription = if (isMonospaceActive) "Disable Monospace Font" else "Enable Monospace Font",
+                        isActive = isMonospaceActive,
+                        accent = accent,
+                        colors = colors,
+                        modifier = Modifier.offset(y = (-0.5).dp), // Optical centering
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onMonospaceToggle()
+                        },
+                    )
+                }
 
                 ToolbarDivider(colors)
 
@@ -105,45 +149,53 @@ fun OtsoKeyboardToolbar(
                     "/" to "/",
                 )
 
-                insertKeys.forEach { (label, insert) ->
-                    ToolbarButton(
-                        label = label,
-                        colors = colors,
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onKeyInsert(insert)
-                        },
-                    )
+                insertKeys.forEachIndexed { index, (label, insert) ->
+                    StaggeredItem(index = index + 5) {
+                        ToolbarButton(
+                            label = label,
+                            contentDescription = "Insert $label",
+                            colors = colors,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onKeyInsert(insert)
+                            },
+                        )
+                    }
                 }
             }
 
             ToolbarDivider(colors)
 
             // FIXED END: Find — Accent pill
-            Box(
-                modifier = Modifier
-                    .padding(end = 4.dp, start = 4.dp)
-                    .height(34.dp)
-                    .widthIn(min = 64.dp)
-                    .otsoClickable {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onFindClick()
-                    }
-                    .background(accent, SquircleShape(12.dp))
-                    .padding(horizontal = 14.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "find",
-                    style = OtsoTypography.uiTechnical.copy(
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
-                    ),
-                    color = Color.White,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                )
+            StaggeredItem(index = 10) { // Delayed entry for the final action
+                Box(
+                    modifier = Modifier
+                        .padding(end = 4.dp, start = 4.dp)
+                        .height(34.dp)
+                        .widthIn(min = 64.dp)
+                        .otsoClickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onFindClick()
+                        }
+                        .semantics(mergeDescendants = true) {
+                            contentDescription = "Find in document"
+                        }
+                        .background(accent, SquircleShape(12.dp))
+                        .padding(horizontal = 14.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "find",
+                        style = OtsoTypography.uiTechnical.copy(
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        ),
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                    )
+                }
             }
         }
     }
@@ -153,6 +205,7 @@ fun OtsoKeyboardToolbar(
 private fun ToolbarButton(
     icon: ImageVector? = null,
     label: String? = null,
+    contentDescription: String? = null,
     isActive: Boolean = false,
     enabled: Boolean = true,
     accent: Color = Color.Unspecified,
@@ -168,6 +221,11 @@ private fun ToolbarButton(
                 color = if (isActive) accent.copy(alpha = 0.12f) else Color.Transparent,
                 shape = SquircleShape(16.dp),
             )
+            .semantics(mergeDescendants = true) {
+                if (contentDescription != null) {
+                    this.contentDescription = contentDescription
+                }
+            }
             .otsoClickable(
                 enabled = enabled, 
                 onClick = onClick
@@ -177,7 +235,7 @@ private fun ToolbarButton(
         if (icon != null) {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
+                contentDescription = null, // Handled by Box semantics
                 modifier = Modifier.size(18.dp),
                 tint = when {
                     !enabled -> colors.muted.copy(alpha = 0.25f)

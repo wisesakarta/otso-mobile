@@ -19,4 +19,6 @@ data class TabDocument(
     val encoding: TextEncoding = TextEncoding.UTF8,
     val lineEnding: LineEnding = LineEnding.LF,
     val isModified: Boolean = false,
+    val createdAt: Long = System.currentTimeMillis(),
+    val lastModified: Long = System.currentTimeMillis(),
 )
