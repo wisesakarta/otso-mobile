@@ -22,6 +22,8 @@ private val DeepCharcoal = Color(0xFF121212)
  * The [rawText] is appended verbatim; all decoration comes exclusively from
  * [ContentBlock.spans], ensuring zero markdown syntax leaks into the rendered output.
  */
+private val colorCache = java.util.concurrent.ConcurrentHashMap<String, Color>()
+
 fun ContentBlock.toAnnotatedString(colors: OtsoColorScheme): AnnotatedString =
     buildAnnotatedString {
         append(rawText)
@@ -51,11 +53,12 @@ fun ContentBlock.toAnnotatedString(colors: OtsoColorScheme): AnnotatedString =
                     )
 
                 SpanStyleType.Highlight -> {
-                    val bg: Color? = span.colorHex
-                        ?.let { hex ->
+                    val bg: Color? = span.colorHex?.let { hex ->
+                        colorCache.getOrPut(hex) {
                             runCatching { Color(android.graphics.Color.parseColor(hex)).copy(alpha = 0.85f) }.getOrNull()
-                        }
-                        ?: colors.accent.copy(alpha = 0.30f)
+                                ?: Color.Transparent
+                        }.takeIf { it != Color.Transparent }
+                    }
                     val resolvedBackground = bg ?: colors.accent.copy(alpha = 0.30f)
                     val isBrightHighlight = isBrightHighlightSafely(bg)
                     if (isBrightHighlight) {
