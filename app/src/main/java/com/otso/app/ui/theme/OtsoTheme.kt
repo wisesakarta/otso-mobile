@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.Outline
@@ -139,65 +140,75 @@ val OtsoTypography = OtsoTypographyTokens(
         fontFamily = GeneralSans,
         fontWeight = FontWeight.Normal,
         fontSize   = 15.sp,
-        lineHeight = (15 * 1.7f).sp,
+        lineHeight = 22.sp,
+        letterSpacing = (-0.01875).em,
+        fontFeatureSettings = "tnum",
     ),
     editorLarge = TextStyle(
         fontFamily = GeneralSans,
         fontWeight = FontWeight.Normal,
         fontSize   = 18.sp,
-        lineHeight = (18 * 1.7f).sp,
+        lineHeight = 22.sp,
+        letterSpacing = (-0.01).em,
+        fontFeatureSettings = "tnum",
     ),
     uiLabel = TextStyle(
         fontFamily = GeneralSans,
         fontWeight = FontWeight.Normal,
         fontSize   = 13.sp,
-        lineHeight = 18.sp,
+        lineHeight = 18.sp, // Cosmos: 1.125rem
+        letterSpacing = (-0.02).em,
     ),
     uiLabelMedium = TextStyle(
         fontFamily = GeneralSans,
         fontWeight = FontWeight.Medium,
         fontSize   = 13.sp,
         lineHeight = 18.sp,
+        letterSpacing = (-0.02).em,
     ),
     uiCaption = TextStyle(
         fontFamily = GeneralSans,
         fontWeight = FontWeight.Normal,
         fontSize   = 11.sp,
-        lineHeight = 16.sp,
+        lineHeight = 14.sp, // Cosmos: 0.875rem
+        letterSpacing = (-0.02).em,
         fontFeatureSettings = "tnum",
-        letterSpacing = 0.15.sp,
     ),
     uiTitle = TextStyle(
         fontFamily = GeneralSans,
         fontWeight = FontWeight.SemiBold,
         fontSize   = 16.sp,
-        lineHeight = 22.sp,
+        lineHeight = 20.sp, // Cosmos: 1.25rem
+        letterSpacing = (-0.02).em,
     ),
     uiTitleLarge = TextStyle(
         fontFamily = GeneralSans,
         fontWeight = FontWeight.SemiBold,
         fontSize   = 22.sp,
-        lineHeight = 28.sp,
+        lineHeight = 26.sp, // Heading-ish
+        letterSpacing = (-0.02).em,
     ),
     uiBodyLarge = TextStyle(
         fontFamily = GeneralSans,
         fontWeight = FontWeight.SemiBold,
         fontSize   = 18.sp,
-        lineHeight = 24.sp,
+        lineHeight = 22.sp,
+        letterSpacing = (-0.01).em,
     ),
     uiDisplayLarge = TextStyle(
         fontFamily = GeneralSans,
         fontWeight = FontWeight.Bold,
         fontSize   = 64.sp,
-        lineHeight = 72.sp,
-        letterSpacing = (-2).sp,
+        lineHeight = 70.sp, // Cosmos: 1.1 ratio
+        letterSpacing = (-0.04).em,
     ),
     uiTechnical = TextStyle(
         fontFamily = GeneralSans,
         fontWeight = FontWeight.Normal,
         fontSize   = 11.sp,
-        lineHeight = 16.sp,
-        fontFeatureSettings = "tnum", // Tabular Numbers: prevents layout shift when numbers change
+        lineHeight = 14.sp,
+        letterSpacing = (-0.02).em,
+        fontFeatureSettings = "tnum",
     ),
 )
 
@@ -236,6 +247,32 @@ val OtsoSpacing = OtsoSpacingTokens(
 
 val LocalOtsoSpacing = compositionLocalOf { OtsoSpacing }
 
+// ─────────────────────────────────────────────
+// Radius & Shapes (Lamé Geometry)
+// ─────────────────────────────────────────────
+
+object OtsoRadius {
+    val xs   = 8.dp   // Micro controls
+    val sm   = 12.dp  // Compact elements (badges, small buttons)
+    val md   = 16.dp  // Inner concentric elements
+    val lg   = 20.dp  // Standard containers (toolbars, dialogs)
+    val xl   = 24.dp  // Large surfaces (bottom sheets)
+    val pill = 100.dp // Pill/capsule shapes
+
+    /**
+     * Enforces concentric radius scaling.
+     * Use this for inner surfaces to maintain uniform padding curves.
+     */
+    fun concentric(outerRadius: Dp, padding: Dp): Dp = outerRadius - padding
+}
+
+object OtsoShapes {
+    val containerSmall  = SquircleShape(OtsoRadius.sm)
+    val containerMedium = SquircleShape(OtsoRadius.lg)
+    val containerLarge  = SquircleShape(OtsoRadius.xl)
+    val pill            = SquircleShape(OtsoRadius.pill)
+}
+
 // Essential Motion Tokens for system components (DO NOT REMOVE)
 object OtsoMotion {
     const val durationQuickMs = 120
@@ -247,6 +284,16 @@ object OtsoMotion {
     val easeOut = androidx.compose.animation.core.CubicBezierEasing(0.23f, 1f, 0.32f, 1f)
     val easeInOut = androidx.compose.animation.core.CubicBezierEasing(0.77f, 0f, 0.175f, 1f)
     val easeDrawer = androidx.compose.animation.core.CubicBezierEasing(0.4f, 0f, 0.2f, 1f)
+    
+    // Physics-based Spring Specs (Red Dot Standard)
+    val springSnappy = androidx.compose.animation.core.spring<Float>(
+        dampingRatio = 0.65f,
+        stiffness = 800f
+    )
+    val springSoft = androidx.compose.animation.core.spring<Float>(
+        dampingRatio = 0.8f,
+        stiffness = 400f
+    )
 }
 
 val androidx.compose.material3.ColorScheme.otsoSpacing: OtsoSpacingTokens
@@ -319,25 +366,22 @@ fun OtsoTheme(
         // Overlay = DESTINATION theme color: new theme "washes over" the screen.
         overlayColor.value = if (darkTheme) OtsoColors.DarkBackground else OtsoColors.LightBackground
 
-        // Cover screen before the heavy recomposition fires.
+        // Cover screen (Faster: 60ms)
         overlayAlpha.animateTo(
             targetValue = 1f,
-            animationSpec = tween(durationMillis = 90, easing = OtsoMotion.easeOut),
+            animationSpec = tween(durationMillis = 60, easing = OtsoMotion.easeOut),
         )
 
-        // Trigger mass recomposition while fully occluded.
+        // Trigger mass recomposition
         appliedDarkTheme = darkTheme
 
-        // Wait for recomposition to complete — 4 frames (~67ms) gives ART
-        // enough headroom even in debug/verify mode (200-500ms recompose).
-        // The overlay hides all of this; no frame drop is visible.
-        repeat(4) { withFrameNanos { } }
+        // Reduced wait (2 frames is enough for modern ART)
+        repeat(2) { withFrameNanos { } }
 
-        // Reveal: simple fade-out only — no content layer transform.
-        // Removing contentScale eliminates compound CPU pressure during fade.
+        // Reveal (Snappier: 140ms)
         overlayAlpha.animateTo(
             targetValue = 0f,
-            animationSpec = tween(durationMillis = 220, easing = OtsoMotion.easeOut),
+            animationSpec = tween(durationMillis = 140, easing = OtsoMotion.easeOut),
         )
     }
 
@@ -445,7 +489,7 @@ fun rememberDynamicFontFamily(
 fun Modifier.otsoClickable(
     enabled: Boolean = true,
     interactionSource: MutableInteractionSource? = null,
-    scaleTarget: Float = 0.97f,
+    scaleTarget: Float = 0.96f,
     onClick: () -> Unit
 ): Modifier = composed {
     val internalInteractionSource = interactionSource ?: remember { MutableInteractionSource() }

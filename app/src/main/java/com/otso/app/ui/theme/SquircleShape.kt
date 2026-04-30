@@ -1,4 +1,4 @@
-﻿package com.otso.app.ui.theme
+package com.otso.app.ui.theme
 
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Outline
@@ -37,6 +37,10 @@ class SquircleShape(
     private val n: Double = 4.0,
 ) : Shape {
 
+    private var cachedPath: Path? = null
+    private var cachedSize: Size? = null
+    private var cachedRadiusPx: Float? = null
+
     private companion object {
         const val TOTAL_SAMPLES = 360
     }
@@ -47,7 +51,13 @@ class SquircleShape(
         density: Density,
     ): Outline {
         val radiusPx = with(density) { cornerRadius.toPx() }
+        if (size == cachedSize && radiusPx == cachedRadiusPx && cachedPath != null) {
+            return Outline.Generic(cachedPath!!)
+        }
         val path = buildSquirclePath(size, radiusPx, n)
+        cachedPath = path
+        cachedSize = size
+        cachedRadiusPx = radiusPx
         return Outline.Generic(path)
     }
 
