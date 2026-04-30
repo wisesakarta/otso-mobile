@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,8 +33,13 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.otso.app.ui.theme.SquircleShape
 import com.otso.app.ui.theme.OtsoTypography
-import com.otso.app.ui.theme.otsoClickable
 import com.otso.app.ui.theme.otsoColors
+import com.otso.app.ui.theme.otsoClickable
+import com.otso.app.ui.theme.StaggeredItem
+import com.otso.app.ui.theme.technicalGrain
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.ui.unit.IntOffset
 
 data class TranslationLanguage(
     val tag: String,
@@ -90,86 +96,109 @@ fun OtsoTranslateDialog(
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            Column(
-                modifier = Modifier
-                    .width(340.dp)
-                    .background(colors.surface, dialogShape)
-                    .border(1.dp, colors.edge, dialogShape)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {},
-                    )
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+            val visible = remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) { visible.value = true }
+
+            AnimatedVisibility(
+                visible = visible.value,
+                enter = fadeIn(spring(stiffness = Spring.StiffnessLow)) +
+                        scaleIn(spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 400f), initialScale = 0.92f),
+                exit = fadeOut(tween(110)) + scaleOut(tween(110), targetScale = 0.95f)
             ) {
-                Text(
-                    text = "Translate",
-                    style = OtsoTypography.uiTitle,
-                    color = colors.ink,
-                )
-
-                LanguageSelector(
-                    label = "From",
-                    selectedTag = sourceTag,
-                    options = sourceLanguages,
-                    onSelect = onSourceChange,
-                )
-                LanguageSelector(
-                    label = "To",
-                    selectedTag = targetTag,
-                    options = targetLanguages,
-                    onSelect = onTargetChange,
-                )
-
-                SelectionOption(
-                    label = "Selected text only",
-                    selected = selectionOnly && hasSelection,
-                    enabled = hasSelection,
-                    onSelect = { selectionOnly = true },
-                )
-                SelectionOption(
-                    label = "Entire document",
-                    selected = !selectionOnly || !hasSelection,
-                    enabled = true,
-                    onSelect = { selectionOnly = false },
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                Column(
+                    modifier = Modifier
+                        .width(340.dp)
+                        .background(colors.surface, dialogShape)
+                        .border(1.dp, colors.edge, dialogShape)
+                        .technicalGrain(0.02f)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {},
+                        )
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(40.dp)
-                            .background(colors.background, SquircleShape(10.dp))
-                            .border(1.dp, colors.edge, SquircleShape(10.dp))
-                            .otsoClickable(onClick = onCancel),
-                        contentAlignment = Alignment.Center,
-                    ) {
+                    StaggeredItem(0) {
                         Text(
-                            text = "Cancel",
-                            style = OtsoTypography.uiLabelMedium,
-                            color = colors.muted,
+                            text = "Translate",
+                            style = OtsoTypography.uiTitle,
+                            color = colors.ink,
                         )
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(40.dp)
-                            .background(colors.accent, SquircleShape(10.dp))
-                            .otsoClickable(onClick = { onTranslate(selectionOnly && hasSelection) }),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = "Translate",
-                            style = OtsoTypography.uiLabelMedium,
-                            color = Color.White,
+                    StaggeredItem(1) {
+                        LanguageSelector(
+                            label = "From",
+                            selectedTag = sourceTag,
+                            options = sourceLanguages,
+                            onSelect = onSourceChange,
                         )
+                    }
+                    StaggeredItem(2) {
+                        LanguageSelector(
+                            label = "To",
+                            selectedTag = targetTag,
+                            options = targetLanguages,
+                            onSelect = onTargetChange,
+                        )
+                    }
+
+                    StaggeredItem(3) {
+                        SelectionOption(
+                            label = "Selected text only",
+                            selected = selectionOnly && hasSelection,
+                            enabled = hasSelection,
+                            onSelect = { selectionOnly = true },
+                        )
+                    }
+                    StaggeredItem(4) {
+                        SelectionOption(
+                            label = "Entire document",
+                            selected = !selectionOnly || !hasSelection,
+                            enabled = true,
+                            onSelect = { selectionOnly = false },
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    StaggeredItem(5) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(40.dp)
+                                    .background(colors.background, SquircleShape(10.dp))
+                                    .border(1.dp, colors.edge, SquircleShape(10.dp))
+                                    .otsoClickable(onClick = onCancel),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = "Cancel",
+                                    style = OtsoTypography.uiLabelMedium,
+                                    color = colors.muted,
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(40.dp)
+                                    .background(colors.accent, SquircleShape(10.dp))
+                                    .otsoClickable(onClick = { onTranslate(selectionOnly && hasSelection) }),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = "Translate",
+                                    style = OtsoTypography.uiLabelMedium,
+                                    color = Color.White,
+                                )
+                            }
+                        }
                     }
                 }
             }

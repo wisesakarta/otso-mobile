@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -47,6 +48,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.otso.app.model.SpanStyleType
 import com.otso.app.ui.theme.OtsoColorScheme
@@ -57,6 +61,7 @@ import com.otso.app.ui.theme.otsoColors
 import com.otso.app.ui.theme.otsoFloatingSolid
 import com.otso.app.ui.theme.stackedShadow
 import com.otso.app.viewmodel.RichTextState
+import com.otso.app.ui.theme.StaggeredItem
 
 private val DefaultHighlightPalette = listOf(
     Color(0xFFF9EB73),
@@ -129,21 +134,23 @@ fun OtsoFormattingToolbar(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .otsoClickable {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    isColorPickerVisible = false
-                                },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = OtsoIcons.ArrowLeft,
-                                contentDescription = "Close color picker",
-                                modifier = Modifier.size(18.dp),
-                                tint = colors.ink.copy(alpha = 0.65f),
-                            )
+                        StaggeredItem(index = 0) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .otsoClickable {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        isColorPickerVisible = false
+                                    },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = OtsoIcons.ArrowLeft,
+                                    contentDescription = "Close color picker",
+                                    modifier = Modifier.size(18.dp),
+                                    tint = colors.ink.copy(alpha = 0.65f),
+                                )
+                            }
                         }
 
                         FormattingDivider(colors)
@@ -156,56 +163,64 @@ fun OtsoFormattingToolbar(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            DefaultHighlightPalette.forEach { color ->
-                                ColorSwatch(
-                                    color = color,
-                                    isDarkMode = colors.isDarkMode,
-                                    isSelected = activeHighlightColorInt?.let { isSameRgb(it, color.toArgb()) } == true,
-                                    onClick = {
-                                        val hex = color.toHexString()
-                                        apply { richTextState.addHighlight(hex) }
-                                        onHighlightColorChange(hex)
-                                        isColorPickerVisible = false
-                                    },
-                                )
+                            DefaultHighlightPalette.forEachIndexed { index, color ->
+                                StaggeredItem(index = index + 1) {
+                                    ColorSwatch(
+                                        color = color,
+                                        isDarkMode = colors.isDarkMode,
+                                        isSelected = activeHighlightColorInt?.let { isSameRgb(it, color.toArgb()) } == true,
+                                        onClick = {
+                                            val hex = color.toHexString()
+                                            apply { richTextState.addHighlight(hex) }
+                                            onHighlightColorChange(hex)
+                                            isColorPickerVisible = false
+                                        },
+                                    )
+                                }
                             }
 
-                            customPalette.forEach { colorInt ->
-                                val color = colorInt.toComposeColor() ?: return@forEach
-                                ColorSwatch(
-                                    color = color,
-                                    isDarkMode = colors.isDarkMode,
-                                    isSelected = activeHighlightColorInt?.let { isSameRgb(it, color.toArgb()) } == true,
-                                    onClick = {
-                                        val hex = color.toHexString()
-                                        apply { richTextState.addHighlight(hex) }
-                                        onHighlightColorChange(hex)
-                                        isColorPickerVisible = false
-                                    },
-                                    onLongClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        onCustomHighlightRemove(colorInt)
-                                    },
-                                )
+                            customPalette.forEachIndexed { index, colorInt ->
+                                val color = colorInt.toComposeColor() ?: return@forEachIndexed
+                                StaggeredItem(index = DefaultHighlightPalette.size + index + 1) {
+                                    ColorSwatch(
+                                        color = color,
+                                        isDarkMode = colors.isDarkMode,
+                                        isSelected = activeHighlightColorInt?.let { isSameRgb(it, color.toArgb()) } == true,
+                                        onClick = {
+                                            val hex = color.toHexString()
+                                            apply { richTextState.addHighlight(hex) }
+                                            onHighlightColorChange(hex)
+                                            isColorPickerVisible = false
+                                        },
+                                        onLongClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            onCustomHighlightRemove(colorInt)
+                                        },
+                                    )
+                                }
                             }
                         }
 
                         // Fixed actions — always visible, never scroll away
                         FormattingDivider(colors)
-                        CustomColorSwatch(
-                            colors = colors,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onOpenColorPicker(activeHighlightHex)
-                            },
-                        )
-                        ClearSwatch(
-                            colors = colors,
-                            onClick = {
-                                apply { richTextState.clearHighlight() }
-                                isColorPickerVisible = false
-                            },
-                        )
+                        StaggeredItem(index = DefaultHighlightPalette.size + customPalette.size + 1) {
+                            CustomColorSwatch(
+                                colors = colors,
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    onOpenColorPicker(activeHighlightHex)
+                                },
+                            )
+                        }
+                        StaggeredItem(index = DefaultHighlightPalette.size + customPalette.size + 2) {
+                            ClearSwatch(
+                                colors = colors,
+                                onClick = {
+                                    apply { richTextState.clearHighlight() }
+                                    isColorPickerVisible = false
+                                },
+                            )
+                        }
                     }
                 } else {
                     Row(
@@ -213,59 +228,53 @@ fun OtsoFormattingToolbar(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterHorizontally),
                     ) {
-                        FormattingButton(
-                            icon = OtsoIcons.TextB,
-                            contentDescription = "Bold",
-                            isActive = isBoldActive,
-                            colors = colors,
-                            onClick = { apply { richTextState.toggleStyle(SpanStyleType.Bold) } },
+                        val actions = listOf(
+                            Triple(OtsoIcons.TextB, "Bold", isBoldActive) to { apply { richTextState.toggleStyle(SpanStyleType.Bold) } },
+                            Triple(OtsoIcons.TextItalic, "Italic", isItalicActive) to { apply { richTextState.toggleStyle(SpanStyleType.Italic) } },
+                            Triple(OtsoIcons.TextStrikethrough, "Strikethrough", isStrikethroughActive) to { apply { richTextState.toggleStyle(SpanStyleType.Strikethrough) } },
+                            Triple(OtsoIcons.TextUnderline, "Underline", isUnderlineActive) to { apply { richTextState.toggleStyle(SpanStyleType.Underline) } },
+                            Triple(OtsoIcons.Code, "Code", isCodeActive) to { apply { richTextState.toggleStyle(SpanStyleType.Code) } }
                         )
-                        FormattingButton(
-                            icon = OtsoIcons.TextItalic,
-                            contentDescription = "Italic",
-                            isActive = isItalicActive,
-                            colors = colors,
-                            onClick = { apply { richTextState.toggleStyle(SpanStyleType.Italic) } },
-                        )
-                        FormattingButton(
-                            icon = OtsoIcons.TextStrikethrough,
-                            contentDescription = "Strikethrough",
-                            isActive = isStrikethroughActive,
-                            colors = colors,
-                            onClick = { apply { richTextState.toggleStyle(SpanStyleType.Strikethrough) } },
-                        )
-                        FormattingButton(
-                            icon = OtsoIcons.TextUnderline,
-                            contentDescription = "Underline",
-                            isActive = isUnderlineActive,
-                            colors = colors,
-                            onClick = { apply { richTextState.toggleStyle(SpanStyleType.Underline) } },
-                        )
-                        FormattingButton(
-                            icon = OtsoIcons.Code,
-                            contentDescription = "Code",
-                            isActive = isCodeActive,
-                            colors = colors,
-                            onClick = { apply { richTextState.toggleStyle(SpanStyleType.Code) } },
-                        )
+
+                        actions.forEachIndexed { index, (props, action) ->
+                            StaggeredItem(index = index) {
+                                FormattingButton(
+                                    icon = props.first,
+                                    contentDescription = props.second,
+                                    isActive = props.third,
+                                    colors = colors,
+                                    modifier = if (props.second == "Italic") Modifier.offset(x = 0.5.dp) else Modifier,
+                                    onClick = action,
+                                )
+                            }
+                        }
+
                         FormattingDivider(colors)
-                        FormattingButton(
-                            icon = OtsoIcons.Highlighter,
-                            contentDescription = "Highlight",
-                            colorSwatch = activeHighlightHex?.let { parseHexColor(it) } ?: colors.accent,
-                            colors = colors,
-                            onClick = { isColorPickerVisible = true },
-                        )
+                        
+                        StaggeredItem(index = actions.size + 1) {
+                            FormattingButton(
+                                icon = OtsoIcons.Highlighter,
+                                contentDescription = "Highlight",
+                                colorSwatch = activeHighlightHex?.let { parseHexColor(it) } ?: colors.accent,
+                                colors = colors,
+                                onClick = { isColorPickerVisible = true },
+                            )
+                        }
+
                         FormattingDivider(colors)
-                        FormattingButton(
-                            icon = OtsoIcons.Link,
-                            contentDescription = "Link",
-                            colors = colors,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onLinkClick()
-                            },
-                        )
+
+                        StaggeredItem(index = actions.size + 3) {
+                            FormattingButton(
+                                icon = OtsoIcons.Link,
+                                contentDescription = "Link",
+                                colors = colors,
+                                modifier = Modifier.offset(x = (-0.5).dp),
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    onLinkClick()
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -280,6 +289,7 @@ private fun FormattingButton(
     colorSwatch: Color? = null,
     isActive: Boolean = false,
     colors: OtsoColorScheme,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     val iconTint by animateColorAsState(
@@ -294,9 +304,10 @@ private fun FormattingButton(
     )
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .size(36.dp)
-            .background(activeBg, SquircleShape(14.dp))
+            .background(activeBg, SquircleShape(16.dp)) // Concentric Rule: Outer(20) - Padding(4) = 16
+            .semantics { selected = isActive }
             .otsoClickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -357,6 +368,13 @@ private fun ColorSwatch(
         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 300f),
         label = "swatch_ring_color",
     )
+    
+    // Accessibility: Communicate state and purpose
+    val semanticsModifier = Modifier.semantics {
+        contentDescription = "Highlight color swatch"
+        selected = isSelected
+    }
+
     val swatchModifier = Modifier.combinedClickable(
         interactionSource = interactionSource,
         indication = null,
@@ -366,11 +384,12 @@ private fun ColorSwatch(
 
     Box(
         modifier = Modifier
-            .size(32.dp)
+            .size(44.dp)
             .graphicsLayer {
                 scaleX = swatchScale
                 scaleY = swatchScale
             }
+            .then(semanticsModifier)
             .then(swatchModifier),
         contentAlignment = Alignment.Center,
     ) {
@@ -397,7 +416,8 @@ private fun CustomColorSwatch(
 ) {
     Box(
         modifier = Modifier
-            .size(32.dp)
+            .size(44.dp)
+            .semantics { contentDescription = "Open custom color picker" }
             .otsoClickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -424,7 +444,7 @@ private fun ClearSwatch(
 ) {
     Box(
         modifier = Modifier
-            .size(32.dp)
+            .size(44.dp)
             .otsoClickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {

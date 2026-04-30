@@ -5,7 +5,6 @@ import android.content.Intent
 import android.graphics.Matrix
 import android.graphics.Typeface
 import android.net.Uri
-import android.util.Log
 import android.util.LruCache
 import com.otso.app.core.FontManager
 import com.otso.app.core.OtsoPreferences
@@ -13,6 +12,7 @@ import com.otso.app.viewmodel.EditorUiState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -72,7 +72,9 @@ class FontFoundryEngine(
 
     fun initializeFontFlow() {
         scope.launch {
-            OtsoPreferences.folderFoundryUriFlow(application).collect { uriString ->
+            OtsoPreferences.folderFoundryUriFlow(application)
+                .distinctUntilChanged()
+                .collect { uriString ->
                 if (uriString.isNullOrBlank()) {
                     _uiState.update {
                         it.copy(
@@ -83,12 +85,14 @@ class FontFoundryEngine(
                             ),
                             activeFoundryFamilyName = null,
                             isFontInitialized = true,
+                            isFontLoading = false,
                         )
                     }
                     return@collect
                 }
 
-                _uiState.update { it.copy(foundryFolderUri = uriString) }
+                android.util.Log.i("OtsoFoundry", "initializeFontFlow collect: uri=$uriString")
+                _uiState.update { it.copy(foundryFolderUri = uriString, isFontLoading = true) }
                 val parsedUri = runCatching { Uri.parse(uriString) }.getOrNull()
                 if (parsedUri == null) {
                     _uiState.update {
@@ -99,20 +103,29 @@ class FontFoundryEngine(
                             ),
                             activeFoundryFamilyName = null,
                             fileAccessError = "Stored font folder URI is invalid.",
+                            isFontInitialized = true,
+                            isFontLoading = false,
                         )
                     }
                     return@collect
                 }
 
+                val startTime = System.currentTimeMillis()
                 val foundries = withContext(Dispatchers.IO) {
                     FontManager.scanFolderForFamilies(parsedUri)
                 }
+
+                // Minimum visual stability time for overlay, but ONLY if not cold start.
+                val elapsed = System.currentTimeMillis() - startTime
+                android.util.Log.i("OtsoFoundry", "Scan finished in ${elapsed}ms. isFontInitialized=${_uiState.value.isFontInitialized}")
+                if (elapsed < 600L && _uiState.value.isFontInitialized) {
+                    android.util.Log.i("OtsoFoundry", "Applying stability delay...")
+                    kotlinx.coroutines.delay(600L - elapsed)
+                }
+
                 val firstFamily = foundries.firstOrNull()
-                Log.d(
-                    FOUNDRY_TAG,
-                    "Resolved foundry families=${foundries.size}, active='${firstFamily?.name}', variants=${firstFamily?.variantCount ?: 0}",
-                )
                 _uiState.update { state ->
+                    android.util.Log.i("OtsoFoundry", "Scan results applied. isFontLoading set to false.")
                     state.copy(
                         font = state.font.copy(
                             activeFoundryFamily = firstFamily?.composeFamily,
@@ -126,6 +139,7 @@ class FontFoundryEngine(
                             null
                         },
                         isFontInitialized = true,
+                        isFontLoading = false,
                     )
                 }
             }
@@ -133,9 +147,45 @@ class FontFoundryEngine(
     }
 
     fun setFoundryFolder(uri: Uri) {
+        val uriString = uri.toString()
+        if (uriString == _uiState.value.foundryFolderUri) {
+            // Force rescan if the folder is the same
+            scope.launch {
+                _uiState.update { it.copy(isFontLoading = true) }
+                val startTime = System.currentTimeMillis()
+                val foundries = withContext(Dispatchers.IO) {
+                    FontManager.scanFolderForFamilies(uri)
+                }
+                val elapsed = System.currentTimeMillis() - startTime
+                if (elapsed < 600L) {
+                    kotlinx.coroutines.delay(600L - elapsed)
+                }
+                val firstFamily = foundries.firstOrNull()
+                _uiState.update { state ->
+                    state.copy(
+                        font = state.font.copy(
+                            activeFoundryFamily = firstFamily?.composeFamily,
+                            activeFoundryVariantCount = firstFamily?.variantCount ?: 0,
+                        ),
+                        activeFoundryFamilyName = firstFamily?.name,
+                        customFontName = firstFamily?.name ?: state.customFontName,
+                        fileAccessError = if (firstFamily == null) {
+                            "No supported font families found in selected folder."
+                        } else {
+                            null
+                        },
+                        isFontLoading = false,
+                    )
+                }
+            }
+            return
+        }
+
+        android.util.Log.d("OtsoFoundry", "setFoundryFolder: uri=$uriString")
+        _uiState.update { it.copy(isFontLoading = true) }
         scope.launch {
             persistFoundryUriPermission(uri)
-            OtsoPreferences.setFolderFoundryUri(application, uri.toString())
+            OtsoPreferences.setFolderFoundryUri(application, uriString)
             OtsoPreferences.setCustomFontPath(application, null)
             OtsoPreferences.setCustomFontName(application, null)
         }
