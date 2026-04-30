@@ -19,6 +19,7 @@ import com.otso.app.ui.theme.technicalGrain
 import com.otso.app.ui.theme.StaggeredItem
 import com.otso.app.ui.theme.otsoClickable
 import com.otso.app.ui.theme.SquircleShape
+import androidx.compose.foundation.border
 
 /**
  * AboutScreen — The Product Manifesto.
@@ -68,15 +69,15 @@ fun AboutScreen(
             StaggeredItem(index = 1) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+                    horizontalAlignment = androidx.compose.ui.Alignment.Start
                 ) {
                     val logoRes = if (otsoColors.isDarkMode) R.drawable.ic_otso_dark else R.drawable.ic_otso_light
                     Image(
                         painter = painterResource(id = logoRes),
                         contentDescription = "Otso Logo",
-                        modifier = Modifier.height(120.dp)
+                        modifier = Modifier.height(48.dp)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "v1.0.0-rc.2",
                         style = otsoTypography.uiTechnical.copy(letterSpacing = 0.3.sp),
@@ -85,7 +86,7 @@ fun AboutScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(72.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             StaggeredItem(index = 2) {
                 Text(
@@ -138,7 +139,7 @@ fun AboutScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 32.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Start,
                     style = otsoTypography.uiTechnical.copy(fontSize = 12.sp),
                     color = otsoColors.ink.copy(alpha = 0.4f)
                 )
@@ -161,6 +162,7 @@ private fun UtilityCard(
             .fillMaxWidth()
             .height(56.dp)
             .background(colors.surface, SquircleShape(16.dp))
+            .border(1.dp, colors.ink.copy(alpha = 0.06f), SquircleShape(16.dp))
             .otsoClickable(onClick = onClick)
             .padding(horizontal = 16.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
