@@ -17,6 +17,8 @@ import com.otso.app.ui.theme.otsoSpacing
 import com.otso.app.ui.theme.otsoTypography
 import com.otso.app.ui.theme.technicalGrain
 import com.otso.app.ui.theme.StaggeredItem
+import com.otso.app.ui.theme.otsoClickable
+import com.otso.app.ui.theme.SquircleShape
 
 /**
  * AboutScreen — The Product Manifesto.
@@ -87,7 +89,7 @@ fun AboutScreen(
 
             StaggeredItem(index = 2) {
                 Text(
-                    text = "Clarity. Function.\nDetail.",
+                    text = "Designed to fade away, so your words can stand out.",
                     style = otsoTypography.uiTitleLarge.copy(
                         lineHeight = 34.sp,
                         letterSpacing = (-0.25).sp,
@@ -100,7 +102,7 @@ fun AboutScreen(
 
             StaggeredItem(index = 3) {
                 Text(
-                    text = "Crafted with discipline by wisesakarta",
+                    text = "Built with care for those who value focus.",
                     style = otsoTypography.uiLabel.copy(
                         lineHeight = 21.sp,
                         letterSpacing = 0.1.sp,
@@ -111,9 +113,28 @@ fun AboutScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
+            // Utility Links
+            val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
             StaggeredItem(index = 4) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    UtilityCard(
+                        icon = com.otso.app.ui.components.OtsoIcons.PaperPlaneTilt,
+                        label = "Send Feedback",
+                        onClick = { uriHandler.openUri("mailto:feedback@wisesakarta.com") }
+                    )
+                    UtilityCard(
+                        icon = com.otso.app.ui.components.OtsoIcons.Code,
+                        label = "Source Code & Roadmap",
+                        onClick = { uriHandler.openUri("https://github.com/wisesakarta") }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            StaggeredItem(index = 5) {
                 Text(
-                    text = "Technical Standard",
+                    text = "Technical Standard • wisesakarta",
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 32.dp),
@@ -124,5 +145,37 @@ fun AboutScreen(
             }
         }
 
+    }
+}
+
+@Composable
+private fun UtilityCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
+    val colors = MaterialTheme.colorScheme.otsoColors
+    val typography = MaterialTheme.colorScheme.otsoTypography
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .background(colors.surface, SquircleShape(16.dp))
+            .otsoClickable(onClick = onClick)
+            .padding(horizontal = 16.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+    ) {
+        androidx.compose.material3.Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = colors.ink
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = label,
+            style = typography.uiLabel.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium),
+            color = colors.ink
+        )
     }
 }
