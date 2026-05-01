@@ -14,6 +14,10 @@ import com.google.android.gms.tasks.Task
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
+import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions
+import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
+import com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -72,6 +76,13 @@ object OcrEngine {
 
     @Volatile
     var mode: EngineMode = EngineMode.MLKIT_HYBRID
+
+    enum class ScriptType {
+        LATIN, CHINESE, JAPANESE, KOREAN, DEVANAGARI
+    }
+
+    @Volatile
+    var targetScript: ScriptType = ScriptType.LATIN
 
     private data class SemanticRule(val pattern: String, val replacement: String, val category: String)
     private var semanticRules: List<SemanticRule>? = null
@@ -195,7 +206,14 @@ object OcrEngine {
     }
 
     private suspend fun recognize(image: InputImage): String {
-        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+        val options = when (targetScript) {
+            ScriptType.LATIN -> TextRecognizerOptions.DEFAULT_OPTIONS
+            ScriptType.CHINESE -> ChineseTextRecognizerOptions.Builder().build()
+            ScriptType.JAPANESE -> JapaneseTextRecognizerOptions.Builder().build()
+            ScriptType.KOREAN -> KoreanTextRecognizerOptions.Builder().build()
+            ScriptType.DEVANAGARI -> DevanagariTextRecognizerOptions.Builder().build()
+        }
+        val recognizer = TextRecognition.getClient(options)
         return try {
             val result = recognizer.process(image).await()
             reconstructLayout(result).normalizeForScoring().cleanupSemanticNoise().cleanupNoise()
