@@ -20,6 +20,18 @@ jobs:
       - name: Decode Keystore from Secrets
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/otso-release.jks
 
+      - name: Configure CI memory
+        run: |
+          printf 'org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8 -XX:+UseParallelGC\n' > gradle.properties
+          printf 'org.gradle.parallel=true\n' >> gradle.properties
+          printf 'org.gradle.caching=true\n' >> gradle.properties
+          printf 'org.gradle.workers.max=2\n' >> gradle.properties
+          printf 'android.suppressUnsupportedCompileSdk=35\n' >> gradle.properties
+          printf 'android.useAndroidX=true\n' >> gradle.properties
+          printf 'android.enableJetifier=true\n' >> gradle.properties
+          echo "--- gradle.properties for CI ---"
+          cat gradle.properties
+
       - name: Build Release APK
         env:
           KEYSTORE_PATH: otso-release.jks
@@ -27,7 +39,6 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          sed -i 's/org.gradle.jvmargs.*/org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g/g' gradle.properties
           chmod +x gradlew
           ./gradlew :app:assembleRelease
 
