@@ -1,0 +1,17 @@
+# Ignore local datasets and model checkpoints
+# We only track scripts and notebooks in Git
+
+datasets/
+models/
+*.tflite
+*.h5
+*.pb
+*.ckpt*
+*.json
+
+# Ignore Python environments and cache
+__pycache__/
+*.pyc
+venv/
+.env
+.ipynb_checkpoints/
