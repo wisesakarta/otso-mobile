@@ -13,7 +13,8 @@ coroutines = "1.9.0"
 junit = "4.13.2"
 material = "1.12.0"
 gson = "2.11.0"
-mlkitTextRecognition = "19.0.0"
+mlkitTextRecognition = "19.0.1"
+mlkitTextRecognitionUnbundled = "16.0.1"
 mlkitLanguageId = "17.0.0"
 mlkitEntityExtraction = "16.0.0-beta6"
 mlkitDocumentScanner = "16.0.0-beta1"
@@ -43,7 +44,11 @@ androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterfa
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 google-material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 google-gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
-google-mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version = "16.0.1" }
+google-mlkit-text-recognition = { group = "com.google.android.gms", name = "play-services-mlkit-text-recognition", version.ref = "mlkitTextRecognition" }
+google-mlkit-text-recognition-chinese = { group = "com.google.android.gms", name = "play-services-mlkit-text-recognition-chinese", version.ref = "mlkitTextRecognitionUnbundled" }
+google-mlkit-text-recognition-japanese = { group = "com.google.android.gms", name = "play-services-mlkit-text-recognition-japanese", version.ref = "mlkitTextRecognitionUnbundled" }
+google-mlkit-text-recognition-korean = { group = "com.google.android.gms", name = "play-services-mlkit-text-recognition-korean", version.ref = "mlkitTextRecognitionUnbundled" }
+google-mlkit-text-recognition-devanagari = { group = "com.google.android.gms", name = "play-services-mlkit-text-recognition-devanagari", version.ref = "mlkitTextRecognitionUnbundled" }
 google-mlkit-language-id = { group = "com.google.mlkit", name = "language-id", version = "17.0.6" }
 google-mlkit-entity-extraction = { group = "com.google.mlkit", name = "entity-extraction", version.ref = "mlkitEntityExtraction" }
 google-mlkit-document-scanner = { group = "com.google.android.gms", name = "play-services-mlkit-document-scanner", version.ref = "mlkitDocumentScanner" }
