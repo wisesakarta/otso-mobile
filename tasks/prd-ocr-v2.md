@@ -62,27 +62,27 @@ Target rilis: **v3.0.0** (Major Release)
 **Deskripsi:** Sebagai pengguna yang menulis dalam bahasa non-Latin, saya ingin OCR dapat mengenali teks dalam bahasa Mandarin, Jepang, Korea, Hindi, dan Arabic.
 
 **Kriteria Penerimaan:**
-- [ ] Menambahkan ML Kit recognizer untuk Chinese/Japanese/Korean (`com.google.mlkit:text-recognition-chinese`, `com.google.mlkit:text-recognition-japanese`, `com.google.mlkit:text-recognition-korean`)
-- [ ] Menambahkan ML Kit recognizer untuk Devanagari (`com.google.mlkit:text-recognition-devanagari`)
-- [ ] `OcrEngine.kt` secara otomatis mendeteksi script dominan menggunakan `IntelligenceEngine.identifyLanguage()` lalu memilih recognizer yang sesuai
-- [ ] Jika deteksi gagal, fallback ke Latin recognizer (perilaku saat ini)
-- [ ] Hybrid mode menjalankan kedua recognizer (Latin + detected script) dan memilih hasil terbaik berdasarkan `qualityScore()`
-- [ ] Build berhasil dan OCR berfungsi untuk teks Latin DAN non-Latin pada device
-- [ ] Typecheck/lint lolos
+- [x] Menambahkan ML Kit recognizer untuk Chinese/Japanese/Korean (`com.google.mlkit:text-recognition-chinese`, `com.google.mlkit:text-recognition-japanese`, `com.google.mlkit:text-recognition-korean`)
+- [x] Menambahkan ML Kit recognizer untuk Devanagari (`com.google.mlkit:text-recognition-devanagari`)
+- [x] `OcrEngine.kt` secara otomatis mendeteksi script dominan menggunakan `IntelligenceEngine.identifyLanguage()` lalu memilih recognizer yang sesuai
+- [x] Jika deteksi gagal, fallback ke Latin recognizer (perilaku saat ini)
+- [x] Hybrid mode menjalankan kedua recognizer (Latin + detected script) dan memilih hasil terbaik berdasarkan `qualityScore()`
+- [x] Build berhasil dan OCR berfungsi untuk teks Latin DAN non-Latin pada device
+- [x] Typecheck/lint lolos
 
 ### US-005: Configurable Semantic Cleanup Rules
 **Deskripsi:** Sebagai engineer, saya ingin aturan pembersihan semantik dapat diperbarui tanpa harus rebuild aplikasi, agar engine tetap bersih dan extensible.
 
 **Kriteria Penerimaan:**
-- [ ] Membuat file konfigurasi JSON: `app/src/main/assets/ocr_cleanup_rules.json`
-- [ ] Format konfigurasi: array of `{ "pattern": "<regex>", "replacement": "<string>", "category": "<string>" }`
-- [ ] `OcrEngine.kt` memuat rules dari JSON saat inisialisasi
-- [ ] Menghapus semua hardcoded brand-specific rules dari `cleanupSemanticNoise()`
-- [ ] Memigrasikan rules yang ada (Indomaret, digit-to-letter fixes) ke file JSON
-- [ ] Menambahkan kategori rules: `"digit_correction"`, `"brand_normalization"`, `"unit_correction"`
-- [ ] Rules diterapkan secara berurutan sesuai urutan di JSON
-- [ ] Build berhasil dan OCR cleanup berfungsi identik dengan sebelumnya pada device
-- [ ] Typecheck/lint lolos
+- [x] Membuat file konfigurasi JSON: `app/src/main/assets/ocr_cleanup_rules.json`
+- [x] Format konfigurasi: array of `{ "pattern": "<regex>", "replacement": "<string>", "category": "<string>" }`
+- [x] `OcrEngine.kt` memuat rules dari JSON saat inisialisasi
+- [x] Menghapus semua hardcoded brand-specific rules dari `cleanupSemanticNoise()`
+- [x] Memigrasikan rules yang ada (Indomaret, digit-to-letter fixes) ke file JSON
+- [x] Menambahkan kategori rules: `"digit_correction"`, `"brand_normalization"`, `"unit_correction"`
+- [x] Rules diterapkan secara berurutan sesuai urutan di JSON
+- [x] Build berhasil dan OCR cleanup berfungsi identik dengan sebelumnya pada device
+- [x] Typecheck/lint lolos
 
 ### US-006: Handwriting Recognition Support
 **Deskripsi:** Sebagai pengguna, saya ingin dapat memfoto catatan tulisan tangan dan mendapatkan hasil teks yang dapat diedit.
