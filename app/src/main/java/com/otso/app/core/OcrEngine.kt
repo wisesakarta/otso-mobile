@@ -31,6 +31,39 @@ object OcrEngine {
         MLKIT_HYBRID,
         NEURAL_BOOST,
     }
+package com.otso.app.core
+
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.net.Uri
+import androidx.exifinterface.media.ExifInterface
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import com.google.android.gms.tasks.Task
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.math.max
+
+object OcrEngine {
+
+    enum class EngineMode {
+        MLKIT_BASELINE,
+        MLKIT_PREPROCESSED,
+        MLKIT_MULTISCALE,
+        MLKIT_LINEBOOST,
+        MLKIT_HYBRID,
+        NEURAL_BOOST,
+    }
 
     data class OcrOutput(
         val text: String,
@@ -40,7 +73,31 @@ object OcrEngine {
     @Volatile
     var mode: EngineMode = EngineMode.MLKIT_HYBRID
 
+    private data class SemanticRule(val pattern: String, val replacement: String, val category: String)
+    private var semanticRules: List<SemanticRule>? = null
+
+    private fun loadRulesIfNeeded(context: Context) {
+        if (semanticRules != null) return
+        try {
+            val jsonString = context.assets.open("ocr_cleanup_rules.json").bufferedReader().use { it.readText() }
+            val jsonArray = org.json.JSONArray(jsonString)
+            val rules = mutableListOf<SemanticRule>()
+            for (i in 0 until jsonArray.length()) {
+                val obj = jsonArray.getJSONObject(i)
+                rules.add(SemanticRule(
+                    pattern = obj.getString("pattern"),
+                    replacement = obj.getString("replacement"),
+                    category = obj.getString("category")
+                ))
+            }
+            semanticRules = rules
+        } catch (e: Exception) {
+            semanticRules = emptyList()
+        }
+    }
+
     suspend fun extract(context: Context, uri: Uri): OcrOutput {
+        loadRulesIfNeeded(context)
         return when (mode) {
             EngineMode.MLKIT_BASELINE -> OcrOutput(runMlKit(context, uri), "mlkit-baseline")
             EngineMode.MLKIT_PREPROCESSED -> OcrOutput(runMlKitPreprocessed(context, uri), "mlkit-preprocessed")
@@ -590,6 +647,15 @@ object OcrEngine {
         out.setPixels(output, 0, width, 0, 0, width, height)
         return out
     }
+
+    private fun String.cleanupSemanticNoise(): String {
+        if (this.isBlank()) return ""
+        var current = this
+        semanticRules?.forEach { rule ->
+            current = current.replace(Regex(rule.pattern), rule.replacement)
+        }
+        return current
+    }
 }
 
 private suspend fun <T> Task<T>.await(): T =
@@ -604,10 +670,4 @@ private fun String.normalizeForScoring(): String {
         .map { it.trim() }
         .filter { it.isNotEmpty() }
         .joinToString("\n")
-}
-private fun String.cleanupSemanticNoise(): String {
-    if (this.isBlank()) return ""
-    return this.replace(Regex("(\\d+)6(?=\\s|$)"), "$1G") // DNA: Fix 506 -> 50G (common units error)
-               .replace(Regex("(?i)Indcmaret|Indemart|TIndksmaat"), "Indomaret") // DNA: Brand normalization
-               .replace(Regex("(?i)IDM KC6"), "IDM KCG") // Indomaret specific
 }
