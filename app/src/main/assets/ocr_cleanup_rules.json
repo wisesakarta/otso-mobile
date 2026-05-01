@@ -1,0 +1,17 @@
+[
+  {
+    "pattern": "(\\d+)6(?=\\s|$)",
+    "replacement": "$1G",
+    "category": "unit_correction"
+  },
+  {
+    "pattern": "(?i)Indcmaret|Indemart|TIndksmaat",
+    "replacement": "Indomaret",
+    "category": "brand_normalization"
+  },
+  {
+    "pattern": "(?i)IDM KC6",
+    "replacement": "IDM KCG",
+    "category": "brand_normalization"
+  }
+]
