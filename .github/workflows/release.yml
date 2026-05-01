@@ -27,8 +27,9 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          sed -i 's/org.gradle.jvmargs.*/org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g/g' gradle.properties
           chmod +x gradlew
-          ./gradlew :app:assembleRelease -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g"
+          ./gradlew :app:assembleRelease
 
       - name: List APK outputs
         run: find app/build/outputs/apk -name "*.apk" 2>/dev/null || echo "No APKs found in output directory"
