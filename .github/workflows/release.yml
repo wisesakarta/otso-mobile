@@ -1,7 +1,7 @@
 name: Build & Release v2.2.0
 
 on:
-  workflow_dispatch: # Allows manual trigger from GitHub UI
+  workflow_dispatch:
 
 jobs:
   build:
@@ -15,22 +15,9 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
       - name: Decode Keystore from Secrets
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/otso-release.jks
-
-      - name: Configure CI memory
-        run: |
-          printf 'org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8 -XX:+UseParallelGC\n' > gradle.properties
-          printf 'org.gradle.parallel=true\n' >> gradle.properties
-          printf 'org.gradle.caching=true\n' >> gradle.properties
-          printf 'org.gradle.workers.max=2\n' >> gradle.properties
-          printf 'android.suppressUnsupportedCompileSdk=35\n' >> gradle.properties
-          printf 'android.useAndroidX=true\n' >> gradle.properties
-          printf 'android.enableJetifier=true\n' >> gradle.properties
-          echo "--- gradle.properties for CI ---"
-          cat gradle.properties
 
       - name: Build Release APK
         env:
@@ -39,6 +26,17 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          echo 'org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8 -XX:+UseParallelGC' > gradle.properties
+          echo 'org.gradle.parallel=true' >> gradle.properties
+          echo 'org.gradle.caching=true' >> gradle.properties
+          echo 'org.gradle.workers.max=2' >> gradle.properties
+          echo 'android.suppressUnsupportedCompileSdk=35' >> gradle.properties
+          echo 'android.useAndroidX=true' >> gradle.properties
+          echo 'android.enableJetifier=true' >> gradle.properties
+          rm -f ~/.gradle/gradle.properties
+          echo "=== gradle.properties ==="
+          cat gradle.properties
+          echo "========================="
           chmod +x gradlew
           ./gradlew :app:assembleRelease
 
