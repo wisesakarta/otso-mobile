@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>v2.0.0</strong>
+  <strong>v2.2.0</strong>
 </p>
 
 **Otso Note** is a product of the **Otso Department**, a division of **Technical Standard**. Driven by the mission to achieve **"The Renaissance of Software"** and uphold the culture of **"Tools for Tough,"** we focus on creating high-fidelity instruments for power users. 
@@ -22,14 +22,18 @@ Kami adalah tim yang masif karena kami berbasis *open-source*. Saya, **Karta Wis
 
 ## Key Features
 
-- **High-Performance Engine:** Fluid rendering for large documents utilizing `LazyColumn` recycle pooling and strict `@Stable` state hoisting.
+- **High-Performance Engine:** Fluid rendering for large documents utilizing `LazyColumn` recycle pooling, `ConcurrentHashMap` color caching, and strict `@Stable` state hoisting. Targeting 120 FPS.
 - **Multi-tab Editing:** Seamless context switching with full session restore.
 - **Encoding Mastery:** Native support for UTF-8, UTF-8 BOM, UTF-16 LE/BE.
 - **Line Ending Control:** LF, CRLF, CR conversions.
 - **Advanced Find & Replace:** Full-text match highlighting with regex support.
+- **Text Highlighter:** Color wheel-based highlighting with persistent span styling.
+- **On-Device OCR:** Neural vision preprocessing (TFLite) + ML Kit text recognition for image-to-text extraction.
+- **On-Device Translation:** ML Kit-powered offline translation with automatic language detection.
 - **Storage Independence:** Internal storage for quick notes + SAF (Storage Access Framework) for external file management.
 - **Typography Control:** Custom font loading directly from device storage.
-- **Adaptive UI:** System / Dark / Light theme with DataStore persistence and a brutalist design language.
+- **Glassmorphism UI:** Multi-layer glass material toolbars with Squircle geometry and Phosphor icon set.
+- **Adaptive UI:** System / Dark / Light theme with DataStore persistence.
 - **Fluid Navigation:** Gesture-based tab manager (swipe down) and floating keyboard accessory toolbar.
 - **Native Experience:** Android 12+ Splash Screen integration.
 
@@ -48,29 +52,41 @@ Kami adalah tim yang masif karena kami berbasis *open-source*. Saya, **Karta Wis
 ./gradlew assembleDebug
 ```
 
-## Production Release:
-Local execution of assembleRelease is disabled for security. Production builds are exclusively handled by the GitHub Actions CI/CD Pipeline. Pushing an annotated tag (e.g., mobile/v*) or triggering the release.yml workflow will automatically build, sign (via injected Keystore Secrets), and upload the R8-minified APK.
+## Production Release
+Local execution of assembleRelease is disabled for security. Production builds are exclusively handled by the GitHub Actions CI/CD Pipeline. Triggering the `release.yml` workflow will automatically build, sign (via injected Keystore Secrets), and upload the R8-minified APK.
 
 ---
 
 ## Release Channel
-Mobile release tags follow: mobile/v*
-Current release: mobile/v2.0.0
+Current release: **v2.2.0**
 Release assets:
-- OtsoNote-v2.0.0.apk (arm64-v8a optimized)
+- `OtsoNote-v2.2.0-Release` (arm64-v8a optimized, via GitHub Actions Artifacts)
 
 ---
 
 ## Repository Structure
 ```
 app/src/main/java/com/otso/app/
-├── core/        # TextCodec, FileIO, SessionIO, TranslationEngine, OtsoPreferences
-├── model/       # TabDocument, RichTextAST (@Stable node parser)
+├── core/
+│   ├── TextCodec          # Encoding detection (UTF-8/16, BOM)
+│   ├── FileIO             # SAF + internal storage I/O
+│   ├── SessionIO          # Tab session persistence
+│   ├── FontManager        # Custom font loader from device
+│   ├── OcrEngine          # ML Kit text recognition + Otsu binarization
+│   ├── NeuralVisionEngine # TFLite neural image preprocessing
+│   ├── IntelligenceEngine # Language ID + entity extraction
+│   ├── TranslationEngine  # ML Kit on-device translation
+│   └── OtsoPreferences    # DataStore preferences
+├── model/                 # TabDocument, RichTextAST (@Stable node parser)
 ├── ui/
-│   ├── components/  # OtsoEditor, OtsoTabBar, OtsoFindBar, OtsoKeyboardToolbar, etc.
-│   ├── screens/     # EditorScreen, AboutScreen
-│   └── theme/       # OtsoTheme, design tokens
-└── viewmodel/   # EditorViewModel, RichTextState
+│   ├── components/        # OtsoEditor, OtsoTabBar, OtsoFindBar,
+│   │                      # OtsoFormattingToolbar, OtsoKeyboardToolbar,
+│   │                      # OtsoColorWheel, OtsoHighlighterPopup,
+│   │                      # OtsoMenuSheet, OtsoIcons (Phosphor)
+│   ├── screens/           # EditorScreen, AboutScreen, AstPreviewScreen
+│   └── theme/             # OtsoTheme, design tokens
+├── viewmodel/             # EditorViewModel, RichTextState
+└── MainActivity.kt        # Single-activity entry
 ```
 
 ---
@@ -84,4 +100,3 @@ Otso Desktop (Win32, C++17): [github.com/wisesakarta/otso.git](https://github.co
 MIT License — see [LICENSE](LICENSE)
 
 Crafted by Technical Standard / Karta Sena Wisesa or Farhan Arif if you get confused who's Karta Wisesa
-
