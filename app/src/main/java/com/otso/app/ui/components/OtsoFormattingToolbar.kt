@@ -48,10 +48,12 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.otso.app.R
 import com.otso.app.model.SpanStyleType
 import com.otso.app.ui.theme.OtsoColorScheme
 import com.otso.app.ui.theme.OtsoMotion
@@ -226,7 +228,7 @@ fun OtsoFormattingToolbar(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterHorizontally),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
                     ) {
                         val actions = listOf(
                             Triple(OtsoIcons.TextB, "Bold", isBoldActive) to { apply { richTextState.toggleStyle(SpanStyleType.Bold) } },
@@ -468,7 +470,6 @@ private fun ClearSwatch(
 private fun FormattingDivider(colors: OtsoColorScheme) {
     Box(
         modifier = Modifier
-            .padding(horizontal = 4.dp)
             .width(1.dp)
             .height(16.dp)
             .background(colors.edge.copy(alpha = 0.15f)),

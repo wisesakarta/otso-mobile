@@ -136,7 +136,7 @@ class RichTextState(initialBlock: ContentBlock) {
                 end = selection.end.coerceIn(0, length),
             )
         } else {
-            TextRange.Zero
+            TextRange(length)
         }
     }
 
@@ -153,10 +153,7 @@ class RichTextState(initialBlock: ContentBlock) {
             saveSnapshot(isTyping = true)
         }
         activeBlockId = blockId
-        selection = TextRange(
-            start = newTfv.selection.start.coerceIn(0, newTfv.text.length),
-            end = newTfv.selection.end.coerceIn(0, newTfv.text.length),
-        )
+        selection = newTfv.selection
 
         if (oldText == newText) return
 
@@ -378,8 +375,10 @@ class RichTextState(initialBlock: ContentBlock) {
 
     /**
      * Resets the state to a fresh [newBlock], typically after external ViewModel edits.
+     * Preserves the current selection if no [newSelection] is explicitly provided.
      */
-    fun reset(newBlock: ContentBlock, newSelection: TextRange = TextRange(newBlock.rawText.length)) {
+    fun reset(newBlock: ContentBlock, newSelection: TextRange? = null) {
+        val targetSelection = newSelection ?: this.selection
         blocks.clear()
         val lines = newBlock.rawText.split("\n")
         if (lines.size == 1) {
@@ -399,20 +398,22 @@ class RichTextState(initialBlock: ContentBlock) {
             }
         }
         // Map flat-text cursor to block-relative cursor
-        val flatCursor = newSelection.end.coerceIn(0, newBlock.rawText.length)
+        val flatCursor = targetSelection.end.coerceIn(0, newBlock.rawText.length)
         var cursorOffset = 0
-        var targetBlock = blocks.last()
-        var relCursor = targetBlock.rawText.length
+        var targetBlockFound = blocks.last()
+        var relCursor = targetBlockFound.rawText.length
+        
         for (b in blocks) {
             val blockEnd = cursorOffset + b.rawText.length
             if (flatCursor <= blockEnd) {
-                targetBlock = b
+                targetBlockFound = b
                 relCursor = (flatCursor - cursorOffset).coerceIn(0, b.rawText.length)
                 break
             }
             cursorOffset += b.rawText.length + 1
         }
-        activeBlockId = targetBlock.blockId
+        
+        activeBlockId = targetBlockFound.blockId
         selection = TextRange(relCursor)
         ensureAtLeastOneBlock()
     }
@@ -465,6 +466,7 @@ class RichTextState(initialBlock: ContentBlock) {
         blocks.add(index + 1, newBlock)
         activeBlockId = newBlock.blockId
         selection = TextRange.Zero
+        android.util.Log.i("OtsoStructural", "Block split: index=$index, newId=${newBlock.blockId}")
     }
 
     /**

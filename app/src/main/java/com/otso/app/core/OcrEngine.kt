@@ -11,45 +11,13 @@ import androidx.exifinterface.media.ExifInterface
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import com.google.android.gms.tasks.Task
+import android.util.Log
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
+import com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions
 import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions
 import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
-import com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.math.max
-
-object OcrEngine {
-
-    enum class EngineMode {
-        MLKIT_BASELINE,
-        MLKIT_PREPROCESSED,
-        MLKIT_MULTISCALE,
-        MLKIT_LINEBOOST,
-        MLKIT_HYBRID,
-        NEURAL_BOOST,
-    }
-package com.otso.app.core
-
-import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
-import android.net.Uri
-import androidx.exifinterface.media.ExifInterface
-import android.graphics.ColorMatrix
-import android.graphics.ColorMatrixColorFilter
-import com.google.android.gms.tasks.Task
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -67,22 +35,24 @@ object OcrEngine {
         MLKIT_LINEBOOST,
         MLKIT_HYBRID,
         NEURAL_BOOST,
+        HANDWRITING,
     }
 
     data class OcrOutput(
         val text: String,
         val engineUsed: String,
+        val visionStatus: NeuralVisionEngine.RuntimeStatus = NeuralVisionEngine.runtimeStatus,
     )
 
     @Volatile
     var mode: EngineMode = EngineMode.MLKIT_HYBRID
 
     enum class ScriptType {
-        LATIN, CHINESE, JAPANESE, KOREAN, DEVANAGARI
+        AUTO, LATIN, CHINESE, JAPANESE, KOREAN, DEVANAGARI
     }
 
     @Volatile
-    var targetScript: ScriptType = ScriptType.LATIN
+    var targetScript: ScriptType = ScriptType.AUTO
 
     private data class SemanticRule(val pattern: String, val replacement: String, val category: String)
     private var semanticRules: List<SemanticRule>? = null
@@ -109,14 +79,32 @@ object OcrEngine {
 
     suspend fun extract(context: Context, uri: Uri): OcrOutput {
         loadRulesIfNeeded(context)
-        return when (mode) {
+        NeuralVisionEngine.loadModel(context)
+        val rawOutput = when (mode) {
             EngineMode.MLKIT_BASELINE -> OcrOutput(runMlKit(context, uri), "mlkit-baseline")
             EngineMode.MLKIT_PREPROCESSED -> OcrOutput(runMlKitPreprocessed(context, uri), "mlkit-preprocessed")
             EngineMode.MLKIT_MULTISCALE -> OcrOutput(runMlKitMultiScale(context, uri), "mlkit-multiscale")
             EngineMode.MLKIT_LINEBOOST -> OcrOutput(runMlKitLineBoost(context, uri), "mlkit-lineboost")
             EngineMode.MLKIT_HYBRID -> runHybrid(context, uri)
-            EngineMode.NEURAL_BOOST -> OcrOutput(runNeuralBoost(context, uri), "neural-boost")
+            EngineMode.NEURAL_BOOST -> {
+                val text = runNeuralBoost(context, uri)
+                OcrOutput(text, neuralEngineLabel(), NeuralVisionEngine.runtimeStatus)
+            }
+            EngineMode.HANDWRITING -> {
+                // Handwriting benefits from higher resolution and less aggressive binarization
+                val bitmap = withContext(Dispatchers.IO) { decodeBitmap(context, uri) } ?: return OcrOutput("", "none")
+                val upscaled = upscaleIfNeeded(bitmap, minWidth = 2000)
+                val image = InputImage.fromBitmap(upscaled, 0)
+                OcrOutput(recognize(image), "handwriting-specialized")
+            }
         }
+        
+        return rawOutput.copy(text = deepPostProcess(context, rawOutput.text))
+    }
+
+    private suspend fun deepPostProcess(context: Context, text: String): String {
+        if (text.isBlank()) return text
+        return IntelligenceEngine.extractAndFormat(context, text)
     }
 
     suspend fun extractText(context: Context, uri: Uri): String {
@@ -126,7 +114,10 @@ object OcrEngine {
     private suspend fun runHybrid(context: Context, uri: Uri): OcrOutput {
         val baseline = runCatching { OcrOutput(runMlKit(context, uri), "mlkit-baseline") }.getOrNull()
         val preprocessed = runCatching { OcrOutput(runMlKitPreprocessed(context, uri), "mlkit-preprocessed") }.getOrNull()
-        val neuralBoost = runCatching { OcrOutput(runNeuralBoost(context, uri), "neural-boost") }.getOrNull()
+        val neuralBoost = runCatching {
+            val text = runNeuralBoost(context, uri)
+            OcrOutput(text, neuralEngineLabel(), NeuralVisionEngine.runtimeStatus)
+        }.getOrNull()
         val multiscale = runCatching { OcrOutput(runMlKitMultiScale(context, uri), "mlkit-multiscale") }.getOrNull()
         val lineBoost = runCatching { OcrOutput(runMlKitLineBoost(context, uri), "mlkit-lineboost") }.getOrNull()
 
@@ -138,6 +129,15 @@ object OcrEngine {
         val fallback = listOfNotNull(multiscale, lineBoost)
             .maxByOrNull { qualityScore(it.text) }
         return fallback ?: OcrOutput("", "none")
+    }
+
+    private fun neuralEngineLabel(): String {
+        val status = NeuralVisionEngine.runtimeStatus
+        return if (status == NeuralVisionEngine.RuntimeStatus.MODEL_READY) {
+            "neural-boost"
+        } else {
+            "neural-boost-degraded-heuristic:${status.name.lowercase()}"
+        }
     }
 
     private suspend fun runMlKit(context: Context, uri: Uri): String {
@@ -206,90 +206,141 @@ object OcrEngine {
     }
 
     private suspend fun recognize(image: InputImage): String {
-        val options = when (targetScript) {
-            ScriptType.LATIN -> TextRecognizerOptions.DEFAULT_OPTIONS
+        var currentScript = targetScript
+        
+        // US-004: Automatic Script Detection
+        if (currentScript == ScriptType.AUTO) {
+            // Pass 1: Fast Baseline (Latin) to get text for language ID
+            val baselineOptions = TextRecognizerOptions.DEFAULT_OPTIONS
+            val baselineRecognizer = TextRecognition.getClient(baselineOptions)
+            val baselineResult = try {
+                baselineRecognizer.process(image).await()
+            } finally {
+                baselineRecognizer.close()
+            }
+            
+            val detectedLang = IntelligenceEngine.identifyLanguage(baselineResult.text)
+            currentScript = mapToScript(detectedLang)
+            
+            // If it's just Latin, we already have the result
+            if (currentScript == ScriptType.LATIN) {
+                return reconstructLayout(baselineResult).processOcrResults()
+            }
+            
+            // Otherwise, we need a Second Pass with the correct recognizer
+            Log.d("OcrEngine", "Auto-detected script: $currentScript (Lang: $detectedLang). Re-running specialized scan.")
+        }
+
+        val options = when (currentScript) {
             ScriptType.CHINESE -> ChineseTextRecognizerOptions.Builder().build()
             ScriptType.JAPANESE -> JapaneseTextRecognizerOptions.Builder().build()
             ScriptType.KOREAN -> KoreanTextRecognizerOptions.Builder().build()
             ScriptType.DEVANAGARI -> DevanagariTextRecognizerOptions.Builder().build()
+            else -> TextRecognizerOptions.DEFAULT_OPTIONS
         }
+        
         val recognizer = TextRecognition.getClient(options)
         return try {
             val result = recognizer.process(image).await()
-            reconstructLayout(result).normalizeForScoring().cleanupSemanticNoise().cleanupNoise()
+            reconstructLayout(result).processOcrResults()
         } finally {
             recognizer.close()
+        }
+    }
+
+    private fun String.processOcrResults(): String {
+        return this.normalizeForScoring().cleanupSemanticNoise().cleanupNoise()
+    }
+
+    private fun mapToScript(langCode: String): ScriptType {
+        return when (langCode) {
+            "zh" -> ScriptType.CHINESE
+            "ja" -> ScriptType.JAPANESE
+            "ko" -> ScriptType.KOREAN
+            "hi", "mr", "ne" -> ScriptType.DEVANAGARI
+            else -> ScriptType.LATIN
         }
     }
 
     private fun reconstructLayout(visionText: com.google.mlkit.vision.text.Text): String {
         if (visionText.textBlocks.isEmpty()) return ""
 
-        // DNA: Grid+ Engine (The Final Boss)
-        // Flatten ALL elements (words) for absolute spatial control
+        // DNA: Grid+ v2 (Elastic Tabulation)
+        // 1. Flatten all elements and filter noise
         val allElements = visionText.textBlocks.flatMap { it.lines }.flatMap { it.elements }
+            .filter { it.text.isNotBlank() }
         if (allElements.isEmpty()) return ""
 
-        // Project X-axis Gutters (Column Detection)
-        // We look for horizontal intervals that contain text across the whole document
-        val sortedByLeft = allElements.sortedBy { it.boundingBox?.left ?: 0 }
-        
-        // Group elements into ROWS using a flexible PVG logic
+        // 2. Row Detection (Horizontal Profiling)
         val rows = mutableListOf<MutableList<com.google.mlkit.vision.text.Text.Element>>()
         val sortedByTop = allElements.sortedBy { it.boundingBox?.top ?: 0 }
         
         for (element in sortedByTop) {
             val elBox = element.boundingBox ?: continue
-            val elMidY = (elBox.top + elBox.bottom) / 2
+            val elCenterY = (elBox.top + elBox.bottom) / 2
             
             val matchingRow = rows.find { row ->
                 val rTop = row.minOf { it.boundingBox?.top ?: Int.MAX_VALUE }
                 val rBottom = row.maxOf { it.boundingBox?.bottom ?: Int.MIN_VALUE }
-                val rMidY = (rTop + rBottom) / 2
+                val rHeight = (rBottom - rTop).coerceAtLeast(1)
                 
-                val midDistance = Math.abs(elMidY - rMidY)
-                val tolerance = (elBox.height() * 0.8f).coerceAtLeast(12f)
-                
-                midDistance < tolerance || elMidY in rTop..rBottom
+                // Allow 50% overlap or proximity within half-height
+                val overlap = maxOf(0, minOf(elBox.bottom, rBottom) - maxOf(elBox.top, rTop))
+                overlap > rHeight * 0.4 || elCenterY in rTop..rBottom
             }
             
-            if (matchingRow != null) {
-                matchingRow.add(element)
-            } else {
-                rows.add(mutableListOf(element))
+            if (matchingRow != null) matchingRow.add(element)
+            else rows.add(mutableListOf(element))
+        }
+
+        // 3. Column/Gutter Detection (Vertical Profiling)
+        // We project the horizontal spans of all elements to find consistent vertical gaps
+        val docWidth = allElements.maxOf { it.boundingBox?.right ?: 0 }
+        val occupancy = IntArray(docWidth + 1)
+        for (el in allElements) {
+            val box = el.boundingBox ?: continue
+            for (x in box.left.coerceAtLeast(0)..box.right.coerceAtMost(docWidth)) {
+                occupancy[x]++
             }
         }
 
+        // Detect Columns based on "Vertical Gutters" (valleys in occupancy)
+        val columns = mutableListOf<Int>()
+        var inColumn = false
+        val threshold = (rows.size * 0.05).toInt().coerceAtLeast(1)
+        
+        for (x in 0..docWidth) {
+            val isBusy = occupancy[x] >= threshold
+            if (isBusy && !inColumn) {
+                columns.add(x)
+                inColumn = true
+            } else if (!isBusy && inColumn) {
+                inColumn = false
+            }
+        }
+
+        // 4. Elastic Assembly
         val resultText = StringBuilder()
-        for (row in rows) {
+        for (row in rows.sortedBy { it.minOf { el -> el.boundingBox?.top ?: 0 } }) {
             val sortedRow = row.sortedBy { it.boundingBox?.left ?: 0 }
-            var currentRowText = ""
-            var lastRight = -1
+            val rowText = StringBuilder()
+            var currentPos = 0
             
             for (element in sortedRow) {
-                val left = element.boundingBox?.left ?: 0
-                val right = element.boundingBox?.right ?: 0
-                val height = element.boundingBox?.height() ?: 20
+                val elBox = element.boundingBox ?: continue
                 
-                if (lastRight != -1) {
-                    val gap = left - lastRight
-                    if (gap > 0) {
-                        // DNA: Monospaced Gutter Alignment
-                        // We use the character width for THIS specific word to calculate spaces
-                        val charWidth = element.boundingBox?.width()?.let { it / element.text.length.coerceAtLeast(1) } ?: (height / 2)
-                        val spaceCount = (gap / charWidth.coerceAtLeast(1)).coerceIn(1, 40)
-                        currentRowText += " ".repeat(spaceCount)
-                    } else if (gap > -5) {
-                        currentRowText += " "
-                    }
-                }
+                // Find which column this element belongs to
+                val colIdx = columns.indexOfLast { it <= elBox.left }.coerceAtLeast(0)
+                val targetCharPos = colIdx * 20 // Fixed width columns for visual alignment
                 
-                currentRowText += element.text
-                lastRight = right
+                val spacesNeeded = (targetCharPos - currentPos).coerceAtLeast(if (currentPos == 0) 0 else 1)
+                rowText.append(" ".repeat(spacesNeeded))
+                rowText.append(element.text)
+                currentPos = targetCharPos + element.text.length + spacesNeeded
             }
             
             if (resultText.isNotEmpty()) resultText.append("\n")
-            resultText.append(currentRowText)
+            resultText.append(rowText)
         }
 
         return resultText.toString()

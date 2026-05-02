@@ -219,23 +219,34 @@ private fun OtsoBlockNode(
     editorTextStyle: TextStyle,
     density: Density,
 ) {
-    var localTfv by remember(block.blockId) {
-        mutableStateOf(
-            TextFieldValue(
-                annotatedString = block.toAnnotatedString(colors),
-                selection = state.getSelectionForBlock(block.blockId),
-            )
-        )
-    }
     val newAnnotated = remember(block.rawText, block.spans, colors) {
         block.toAnnotatedString(colors)
     }
     var lastActiveBlockId by remember { mutableStateOf<String?>(null) }
     val isCurrentlyActive = state.activeBlockId == block.blockId
+
+    var localTfv by remember(block.blockId) {
+        mutableStateOf(
+            TextFieldValue(
+                annotatedString = newAnnotated,
+                selection = if (isCurrentlyActive) state.getSelectionForBlock(block.blockId) else TextRange(block.rawText.length)
+            )
+        )
+    }
+
+    LaunchedEffect(localTfv.selection) {
+        android.util.Log.d("OtsoEditor", "Block ${block.blockId} selection changed to ${localTfv.selection}")
+    }
     
     if (isCurrentlyActive && lastActiveBlockId != block.blockId) {
+        // When a block becomes active, we pull the authoritative selection once
+        // to sync with the global state, but we only do it if the local state is different
+        // and we are ready to receive focus.
         val authoritative = state.getSelectionForBlock(block.blockId)
-        localTfv = localTfv.copy(selection = authoritative)
+        android.util.Log.i("OtsoEditor", "OtsoBlockNode: Block ${block.blockId} became active. authoritative=$authoritative, local=${localTfv.selection}")
+        if (localTfv.selection != authoritative) {
+            localTfv = localTfv.copy(selection = authoritative)
+        }
         lastActiveBlockId = block.blockId
     } else if (!isCurrentlyActive) {
         lastActiveBlockId = null
