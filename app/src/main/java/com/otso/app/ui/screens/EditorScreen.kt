@@ -273,7 +273,9 @@ fun EditorScreen(
     val latestActiveRichTextState by rememberUpdatedState(activeRichTextState)
     // Tracks the last flat-text we pushed to the ViewModel from this editor.
     // Used to suppress spurious resets caused by the debounce firing while the user is still typing.
-    var lastPushedContent by remember { mutableStateOf("") }
+    // Tracks the last flat-text we pushed to the ViewModel from this editor for this specific tab.
+    // Keyed by tabId to prevent cross-tab state contamination.
+    var lastPushedContent by remember(activeTab?.id) { mutableStateOf(activeTab?.content ?: "") }
     fun pushFlatTextToViewModel(tabId: String, richTextState: com.otso.app.viewmodel.RichTextState) {
         val flatText = richTextState.getFlatText("\n")
         lastPushedContent = flatText
@@ -311,53 +313,61 @@ fun EditorScreen(
         staleIds.forEach { staleId -> richTextStates.remove(staleId) }
     }
 
-    // Content reset: fires only when actual text or spans change from an external source
-    // (e.g. file open, Find/Replace). Selection changes are intentionally excluded from
-    // the key set — they must never trigger a reset or a scroll-to-cursor jump.
-    LaunchedEffect(activeTab?.id, activeTab?.content, activeTab?.spans) {
+    // DNA: Content & Selection Synchronization (Karpathy Surgical Consolidation)
+    // We combine content reset and selection sync into a single atomic effect keyed by the tab.
+    // This prevents "Double-Jump" race conditions where text resets to end before selection kicks in.
+    LaunchedEffect(activeTab?.id, activeTab?.content, activeVmSelection, activeTab?.spans) {
         val tab = activeTab ?: return@LaunchedEffect
         val richTextState = activeRichTextState ?: return@LaunchedEffect
         val vmBlock = tab.toContentBlockForEditor()
         val currentFlatText = richTextState.getFlatText("\n")
-        val isOwnPush = lastPushedContent == vmBlock.rawText
-        if (!isOwnPush && currentFlatText != vmBlock.rawText) {
-            richTextState.reset(vmBlock)
-        }
-    }
-
-        LaunchedEffect(activeTab?.id, activeVmSelection) {
-
-        val vmSel = activeVmSelection ?: return@LaunchedEffect
-        val richTextState = activeRichTextState ?: return@LaunchedEffect
-        val isOwnPush = lastPushedContent == (activeTab?.content ?: "")
         
-
-        if (!isOwnPush) return@LaunchedEffect
-
-        val targetBlock = richTextState.blocks.find { it.blockId == richTextState.activeBlockId } 
-            ?: run {
-
-                return@LaunchedEffect
+        // Critical: Check if the incoming ViewModel change is our own push
+        // Critical Renaissance Rule: If the user is actively typing (focused), the Editor is the Source of Truth.
+        // We only allow a full reset if the user is NOT focused (external update) or if the tab ID changed.
+        val isFocused = view.hasFocus()
+        
+        // Structural Authority: If we just split a block, our local count is higher than VM.
+        // We MUST NOT reset until the VM catches up, or we destroy the user's new line.
+        val vmBlockCount = tab.content.split("\n").size
+        val isStructuralMismatch = richTextState.blocks.size > vmBlockCount
+        val isOwnPush = vmBlock.rawText == lastPushedContent
+        
+        if (!isOwnPush && currentFlatText != vmBlock.rawText) {
+            // Telemetry: Audit why a reset is or isn't happening
+            val reason = when {
+                isFocused -> "Editor has focus (High Authority)"
+                isStructuralMismatch -> "Structural mismatch (Split in progress)"
+                else -> "External update"
             }
             
-        val blockLen = targetBlock.rawText.length
-        val clampedSel = androidx.compose.ui.text.TextRange(
-            vmSel.start.coerceIn(0, blockLen),
-            vmSel.end.coerceIn(0, blockLen),
-        )
-        
-        val currentSel = richTextState.getSelectionForBlock(targetBlock.blockId)
-
-        
-        if (currentSel != clampedSel) {
-
-            richTextState.updateBlock(
-                targetBlock.blockId,
-                androidx.compose.ui.text.input.TextFieldValue(
-                    text = targetBlock.rawText,
-                    selection = clampedSel,
-                ),
-            )
+            if (!isFocused && !isStructuralMismatch) {
+                android.util.Log.d("OtsoTelemetry", "Sync: ACCEPTED reset. Reason: $reason")
+                richTextState.reset(vmBlock, activeVmSelection)
+            } else {
+                android.util.Log.d("OtsoTelemetry", "Sync: SUPPRESSED reset. Reason: $reason")
+            }
+        } else if (activeVmSelection != null && !isFocused && !isStructuralMismatch) {
+            // Selection-only sync from VM: ONLY apply if NO structural mismatch and NOT focused.
+            // This prevents the "Jump to Start" flicker when hitting Enter.
+            val targetBlock = richTextState.blocks.find { it.blockId == richTextState.activeBlockId }
+            if (targetBlock != null) {
+                val blockLen = targetBlock.rawText.length
+                val clampedSel = androidx.compose.ui.text.TextRange(
+                    activeVmSelection.start.coerceIn(0, blockLen),
+                    activeVmSelection.end.coerceIn(0, blockLen),
+                )
+                val currentSel = richTextState.getSelectionForBlock(targetBlock.blockId)
+                if (currentSel != clampedSel) {
+                    richTextState.updateBlock(
+                        targetBlock.blockId,
+                        androidx.compose.ui.text.input.TextFieldValue(
+                            text = targetBlock.rawText,
+                            selection = clampedSel,
+                        ),
+                    )
+                }
+            }
         }
     }
 

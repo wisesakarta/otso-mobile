@@ -76,7 +76,7 @@ fun OtsoKeyboardToolbar(
                     .horizontalScroll(scrollState)
                     .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Undo
                 StaggeredItem(index = 0) {
@@ -114,7 +114,7 @@ fun OtsoKeyboardToolbar(
                         icon = OtsoIcons.Camera,
                         contentDescription = "Scan Document",
                         colors = colors,
-                        modifier = Modifier.offset(y = (-0.5).dp),
+                        modifier = Modifier.offset(y = (-0.2).dp), // Heavier shape needs less lift
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onScanClick()
@@ -125,12 +125,12 @@ fun OtsoKeyboardToolbar(
                 // Monospace toggle
                 StaggeredItem(index = 3) {
                     ToolbarButton(
-                        label = "M",
+                        icon = OtsoIcons.LetterM,
                         contentDescription = if (isMonospaceActive) "Disable Monospace Font" else "Enable Monospace Font",
                         isActive = isMonospaceActive,
                         accent = accent,
                         colors = colors,
-                        modifier = Modifier.offset(y = (-0.5).dp), // Optical centering
+                        modifier = Modifier.offset(y = (-0.2).dp), // Vectors are centered perfectly
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onMonospaceToggle()
@@ -142,19 +142,20 @@ fun OtsoKeyboardToolbar(
 
                 // Insert keys
                 val insertKeys = listOf(
-                    "tab" to "\t",
-                    "( )" to "()",
-                    "[ ]" to "[]",
-                    "\" \"" to "\"\"",
-                    "/" to "/",
+                    OtsoIcons.TabKey to "\t",
+                    OtsoIcons.Parentheses to "()",
+                    OtsoIcons.Brackets to "[]",
+                    OtsoIcons.Quotes to "\"\"",
+                    OtsoIcons.Slash to "/",
                 )
 
-                insertKeys.forEachIndexed { index, (label, insert) ->
+                insertKeys.forEachIndexed { index, (icon, insert) ->
                     StaggeredItem(index = index + 5) {
                         ToolbarButton(
-                            label = label,
-                            contentDescription = "Insert $label",
+                            icon = icon,
+                            contentDescription = "Insert control",
                             colors = colors,
+                            modifier = Modifier.offset(y = (-0.2).dp), // Unified alignment
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 onKeyInsert(insert)
@@ -236,7 +237,7 @@ private fun ToolbarButton(
             Icon(
                 imageVector = icon,
                 contentDescription = null, // Handled by Box semantics
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(18.dp), // Optical reduction from 20dp
                 tint = when {
                     !enabled -> colors.muted.copy(alpha = 0.25f)
                     isActive -> accent
@@ -247,8 +248,8 @@ private fun ToolbarButton(
             Text(
                 text = label,
                 style = OtsoTypography.uiTechnical.copy(
-                    fontSize = 11.sp,
-                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium
+                    fontSize = 12.5.sp, // Optical increase from 11sp
+                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.SemiBold // Increased weight for balance
                 ),
                 color = when {
                     !enabled -> colors.muted.copy(alpha = 0.25f)
@@ -264,7 +265,6 @@ private fun ToolbarButton(
 private fun ToolbarDivider(colors: com.otso.app.ui.theme.OtsoColorScheme) {
     Box(
         modifier = Modifier
-            .padding(horizontal = 4.dp)
             .width(1.dp)
             .height(16.dp)
             .background(colors.edge.copy(alpha = 0.15f))

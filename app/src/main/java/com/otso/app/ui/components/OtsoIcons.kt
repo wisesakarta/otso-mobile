@@ -58,6 +58,14 @@ object OtsoIcons {
 
     val PaperPlaneTilt: ImageVector get() = buildIcon("PaperPlaneTilt", "M210.3,35.9L23.9,88.4a8,8,0,0,0-1.2,15l85.6,40.5a7.8,7.8,0,0,1,3.8,3.8l40.5,85.6a8,8,0,0,0,15-1.2L220.1,45.7A7.9,7.9,0,0,0,210.3,35.9ZM115.5,140.5,160,96")
 
+    // Technical Glyphs (Vector replacements for text labels to ensure weight consistency)
+    val LetterM: ImageVector get() = buildIcon("LetterM", "M80,192V64l48,56,48-56V192")
+    val TabKey: ImageVector get() = buildIcon("TabKey", "M40,128H216 M176,88l40,40-40,40 M40,88v80")
+    val Parentheses: ImageVector get() = buildIcon("Parentheses", "M96,64a64,64,0,0,0,0,128 M160,64a64,64,0,0,1,0,128")
+    val Brackets: ImageVector get() = buildIcon("Brackets", "M80,64h-16v128h16 M176,64h16v128h16")
+    val Slash: ImageVector get() = buildIcon("Slash", "M160,48L96,208")
+    val Quotes: ImageVector get() = buildIcon("Quotes", "M104,112v48a24,24,0,0,1-24,24H72 M184,112v48a24,24,0,0,1-24,24h-8")
+
     private fun buildIcon(iconName: String, pathData: String): ImageVector {
         return ImageVector.Builder(
             name = "OtsoIcons." + iconName,

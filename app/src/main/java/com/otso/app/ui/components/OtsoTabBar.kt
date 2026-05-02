@@ -172,7 +172,7 @@ fun OtsoTabBar(
                                         }
                                     },
                                 textStyle = OtsoTypography.uiLabelMedium.copy(color = otsoColors.ink),
-                                cursorBrush = SolidColor(Color(0XFF001AE2)),
+                                cursorBrush = SolidColor(otsoColors.accent),
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                                 keyboardActions = KeyboardActions(onDone = { onRenameFinish() }),
@@ -215,7 +215,7 @@ fun OtsoTabBar(
                                     Box(
                                         modifier = Modifier
                                             .size(5.dp)
-                                            .background(Color(0xFF001AE2).copy(alpha = 0.5f), CircleShape),
+                                            .background(otsoColors.accent.copy(alpha = 0.5f), CircleShape),
                                     )
                                 }
                             }

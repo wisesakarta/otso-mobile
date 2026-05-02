@@ -21,6 +21,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawWithContent
@@ -313,16 +315,18 @@ fun OtsoTheme(
     // swap happens while the screen is covered — hiding the one-time mass
     // recomposition of LocalOtsoColors consumers behind the opaque flash.
     var appliedDarkTheme by remember { mutableStateOf(darkTheme) }
+    val context = LocalContext.current
+    val accentPrimary = colorResource(id = R.color.accent_primary)
 
-    val finalOtsoScheme = remember(appliedDarkTheme) {
+    val finalOtsoScheme = remember(appliedDarkTheme, accentPrimary) {
         OtsoColorScheme(
             background = if (appliedDarkTheme) OtsoColors.DarkBackground else OtsoColors.LightBackground,
             ink        = if (appliedDarkTheme) OtsoColors.DarkInk        else OtsoColors.LightInk,
             muted      = if (appliedDarkTheme) OtsoColors.DarkMuted      else OtsoColors.LightMuted,
             edge       = if (appliedDarkTheme) OtsoColors.DarkEdge       else OtsoColors.LightEdge,
             surface    = if (appliedDarkTheme) OtsoColors.DarkSurface    else OtsoColors.LightSurface,
-            accent     = OtsoColors.Accent,
-            accentMuted= OtsoColors.AccentMuted,
+            accent     = accentPrimary,
+            accentMuted= accentPrimary.copy(alpha = 0.18f),
             shadowColor= if (appliedDarkTheme) OtsoColors.DarkShadow     else OtsoColors.LightShadow,
             isDarkMode = appliedDarkTheme,
         )

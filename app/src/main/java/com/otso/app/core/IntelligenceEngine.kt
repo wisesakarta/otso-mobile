@@ -88,6 +88,9 @@ object IntelligenceEngine {
                     // We could format to YYYY-MM-DD but keeping it conservative for now
                     originalValue
                 }
+                com.google.mlkit.nl.entityextraction.Entity.TYPE_MONEY -> {
+                    formatCurrency(originalValue)
+                }
                 else -> originalValue
             }
             
@@ -97,6 +100,25 @@ object IntelligenceEngine {
         }
         
         return result
+    }
+
+    /**
+     * Standardizes currency formatting (Industrial Standard).
+     * Example: "rp 50000" -> "Rp 50.000"
+     */
+    fun formatCurrency(value: String): String {
+        val digits = value.replace(Regex("[^\\d]"), "")
+        if (digits.isEmpty()) return value
+        
+        val amount = digits.toLongOrNull() ?: return value
+        val formattedAmount = java.text.NumberFormat.getIntegerInstance(java.util.Locale.GERMANY).format(amount)
+        
+        return when {
+            value.contains("Rp", ignoreCase = true) -> "Rp $formattedAmount"
+            value.contains("$") -> "$ $formattedAmount"
+            value.contains("¥") -> "¥ $formattedAmount"
+            else -> formattedAmount
+        }
     }
 
     private fun isEntityLanguageSupported(lang: String): Boolean {
