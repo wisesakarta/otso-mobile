@@ -218,7 +218,7 @@ fun OtsoFindBar(
 
                 // Replace Actions
                 FindBarButton(
-                    icon = OtsoIcons.ArrowClockwise,
+                    icon = OtsoIcons.ArrowRight,
                     modifier = Modifier.offset(y = (-0.5).dp),
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)

@@ -81,7 +81,7 @@ fun OtsoKeyboardToolbar(
             ) {
                 // DNA: Logical Grouping (Undo/Redo)
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(0.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Undo

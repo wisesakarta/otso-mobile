@@ -152,6 +152,17 @@ object OtsoIcons {
         }
     }
 
+    val ArrowRight = buildIcon("ArrowRight") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(48f, 128f)
+            horizontalLineTo(208f)
+            moveTo(208f, 128f)
+            lineTo(144f, 64f)
+            moveTo(208f, 128f)
+            lineTo(144f, 192f)
+        }
+    }
+
     val Plus = buildIcon("Plus") {
         path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
             moveTo(40f, 128f)
@@ -480,31 +491,31 @@ object OtsoIcons {
     }
 
     val FolderCounterClockwise = buildIcon("FolderCounterClockwise") {
-        // Folder Notch
+        // Folder body (identical to Folder icon)
         path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(216.89f, 208f)
+            horizontalLineTo(39.38f)
+            arcTo(7.4f, 7.4f, 0f, false, true, 32f, 200.62f)
+            verticalLineTo(80f)
+            horizontalLineTo(216f)
+            arcTo(8f, 8f, 0f, false, true, 224f, 88f)
+            verticalLineTo(200.89f)
+            arcTo(7.11f, 7.11f, 0f, false, true, 216.89f, 208f)
+            close()
             moveTo(32f, 80f)
             verticalLineTo(56f)
             arcTo(8f, 8f, 0f, false, true, 40f, 48f)
             horizontalLineTo(92.69f)
             arcTo(8f, 8f, 0f, false, true, 98.34f, 50.34f)
             lineTo(128f, 80f)
-            horizontalLineTo(216f)
-            arcTo(8f, 8f, 0f, false, true, 224f, 88f)
-            verticalLineTo(112f)
-            moveTo(32f, 136f)
-            verticalLineTo(80f)
-            horizontalLineTo(216f)
-            moveTo(32f, 200.62f)
-            arcTo(7.4f, 7.4f, 0f, false, false, 39.38f, 208f)
-            horizontalLineTo(104f)
         }
-        // Arrow (Fixed)
+        // CCW circular arrow — center (184,164) r=28, 270° CCW arc east→south, arrowhead at south pointing east
         path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
-            moveTo(195.9f, 156.1f)
-            arcTo(40f, 40f, 0f, true, true, 160f, 152f)
-            moveTo(160f, 112f)
-            verticalLineTo(152f)
-            horizontalLineTo(200f)
+            moveTo(212f, 164f)
+            arcTo(28f, 28f, 0f, true, false, 184f, 192f)
+            lineTo(176f, 184f)
+            moveTo(184f, 192f)
+            lineTo(176f, 200f)
         }
     }
 
