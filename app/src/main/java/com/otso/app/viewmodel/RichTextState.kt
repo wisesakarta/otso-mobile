@@ -14,6 +14,7 @@ import com.otso.app.model.ContentBlock
 import com.otso.app.model.SpanStyleType
 import com.otso.app.model.TextSpan
 import java.util.Locale
+import com.otso.app.BuildConfig
 
 data class EditorSnapshot(
     val blocks: List<ContentBlock>,
@@ -185,6 +186,7 @@ class RichTextState(initialBlock: ContentBlock) {
                 focusBlockId = targetBlock.blockId,
                 focusOffset = focusOffset,
             )
+            if (BuildConfig.DEBUG) android.util.Log.i("OtsoState", "extendSelection NEW: from=$fromBlockId(dir=$direction) → anchor=$fromBlockId offset=$anchorOffset, focus=${targetBlock.blockId} offset=$focusOffset")
         } else {
             // Extend existing multi-block selection
             val focusOffset = if (direction < 0) 0 else targetBlock.rawText.length
@@ -192,6 +194,7 @@ class RichTextState(initialBlock: ContentBlock) {
                 focusBlockId = targetBlock.blockId,
                 focusOffset = focusOffset,
             )
+            if (BuildConfig.DEBUG) android.util.Log.i("OtsoState", "extendSelection EXTEND: focus → ${targetBlock.blockId} offset=$focusOffset")
         }
         // Do NOT change activeBlockId here: moving focus to the target block causes the IME
         // to attach to a new InputConnection, which resets the selection to collapsed [0,0],
@@ -205,6 +208,7 @@ class RichTextState(initialBlock: ContentBlock) {
      */
     fun clearMultiBlockSelection() {
         if (multiBlockSelection.isActive) {
+            if (BuildConfig.DEBUG) android.util.Log.i("OtsoState", "clearMultiBlockSelection: was anchor=${multiBlockSelection.anchorBlockId}, focus=${multiBlockSelection.focusBlockId}")
             multiBlockSelection = MultiBlockSelection.None
         }
     }
@@ -215,6 +219,7 @@ class RichTextState(initialBlock: ContentBlock) {
         val last = blocks.last()
         if (blocks.size == 1) {
             selection = TextRange(0, first.rawText.length)
+            if (BuildConfig.DEBUG) android.util.Log.i("OtsoState", "selectAll: single block, selection=${selection}")
             return
         }
         multiBlockSelection = MultiBlockSelection(
@@ -223,7 +228,10 @@ class RichTextState(initialBlock: ContentBlock) {
             focusBlockId = last.blockId,
             focusOffset = last.rawText.length,
         )
-        selection = TextRange(0, first.rawText.length)
+        // selection represents the range within the ACTIVE block
+        val activeBlock = blocks.firstOrNull { it.blockId == activeBlockId } ?: first
+        selection = TextRange(0, activeBlock.rawText.length)
+        if (BuildConfig.DEBUG) android.util.Log.i("OtsoState", "selectAll: ${blocks.size} blocks, multiBlock anchor=${first.blockId} focus=${last.blockId}, activeBlock selection=${selection}")
     }
 
     /**
@@ -635,7 +643,7 @@ class RichTextState(initialBlock: ContentBlock) {
         blocks.add(index + 1, newBlock)
         activeBlockId = newBlock.blockId
         selection = TextRange.Zero
-        android.util.Log.i("OtsoStructural", "Block split: index=$index, newId=${newBlock.blockId}")
+        if (BuildConfig.DEBUG) android.util.Log.i("OtsoStructural", "Block split: index=$index, newId=${newBlock.blockId}")
     }
 
     /**

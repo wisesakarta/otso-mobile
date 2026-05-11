@@ -24,6 +24,7 @@ import com.otso.app.ui.theme.OtsoMotion
 import com.otso.app.ui.theme.SquircleShape
 import com.otso.app.ui.theme.otsoClickable
 import com.otso.app.ui.theme.otsoColors
+import com.otso.app.ui.theme.OtsoColors
 import com.otso.app.ui.theme.otsoFloatingSolid
 import kotlinx.coroutines.launch
 
@@ -54,15 +55,7 @@ fun OtsoHighlighterPopup(
     val paletteScale = remember { Animatable(0.95f) }
     val paletteAlpha = remember { Animatable(0f) }
 
-    val paletteColors = listOf(
-        Color(0xFFF9EB73), // Yellow
-        Color(0xFF86EFAC), // Green
-        Color(0xFF93C5FD), // Blue
-        Color(0xFFFCA5A5), // Red
-        Color(0xFFD8B4FE), // Purple
-        Color(0xFFFDBA74), // Orange
-        Color.Transparent, // Clear
-    )
+    val paletteColors = remember { OtsoColors.HighlightPalette + Color.Transparent }
 
     LaunchedEffect(Unit) {
         launch { paletteScale.animateTo(1f, tween(durationMillis = 170, easing = OtsoMotion.easeOut)) }

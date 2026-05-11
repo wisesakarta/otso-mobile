@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -152,8 +153,11 @@ private fun TabItem(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             if (isModified) {
-                Box(
-                    modifier = Modifier.size(6.dp).background(colors.accent, androidx.compose.foundation.shape.CircleShape)
+                Icon(
+                    imageVector = OtsoIcons.Asterisk,
+                    contentDescription = "Unsaved changes",
+                    modifier = Modifier.size(10.dp),
+                    tint = colors.accent
                 )
             }
 

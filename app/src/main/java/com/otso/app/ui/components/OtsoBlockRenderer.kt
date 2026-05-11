@@ -9,7 +9,6 @@ import androidx.compose.ui.unit.sp
 import com.otso.app.model.BlockType
 import com.otso.app.model.ContentBlock
 import com.otso.app.ui.mapper.toAnnotatedString
-import com.otso.app.ui.theme.GeneralSans
 import com.otso.app.ui.theme.JetBrainsMono
 import com.otso.app.ui.theme.OtsoTypography
 import com.otso.app.ui.theme.otsoColors
@@ -28,12 +27,10 @@ fun OtsoBlockRenderer(block: ContentBlock) {
 
     val textStyle: TextStyle = when (block.type) {
         BlockType.Heading1 -> OtsoTypography.editorBody.copy(
-            fontFamily = GeneralSans,
             fontSize = 28.sp,
             lineHeight = 36.sp,
         )
         BlockType.Heading2 -> OtsoTypography.editorBody.copy(
-            fontFamily = GeneralSans,
             fontSize = 22.sp,
             lineHeight = 30.sp,
         )

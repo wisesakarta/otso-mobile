@@ -69,6 +69,7 @@ import com.otso.app.ui.theme.OtsoSpacing
 import com.otso.app.ui.theme.OtsoTypography
 import com.otso.app.ui.theme.otsoColors
 import com.otso.app.viewmodel.RichTextState
+import com.otso.app.BuildConfig
 import kotlin.math.roundToInt
 
 private const val MIN_EDITOR_FONT_SP = 10
@@ -79,7 +80,7 @@ private const val MAX_EDITOR_FONT_SP = 64
 @Suppress("UNUSED_PARAMETER")
 fun OtsoEditor(
     richTextState: RichTextState,
-    fontFamily: FontFamily = GeneralSans,
+    fontFamily: FontFamily = com.otso.app.BrandAssets.defaultFont,
     fontSizeSp: Int = 15,
     allowStyleSynthesis: Boolean = true,
     findMatches: List<IntRange> = emptyList(),
@@ -240,43 +241,56 @@ private fun OtsoBlockNode(
 
     // Track previous selection to detect boundary-reaching drags
     var previousSelection by remember { mutableStateOf(localTfv.selection) }
+    // Suppresses boundary-detection when selection is set programmatically (selectAll, undo, block activation)
+    val suppressBoundaryDetection = remember { java.util.concurrent.atomic.AtomicBoolean(false) }
 
     LaunchedEffect(localTfv.selection) {
-        android.util.Log.d("OtsoEditor", "Block ${block.blockId} selection changed to ${localTfv.selection}")
-        
+        if (BuildConfig.DEBUG) android.util.Log.i("OtsoEditor", "Block ${block.blockId} selection changed to ${localTfv.selection} (suppress=${suppressBoundaryDetection.get()})")
+
+        if (suppressBoundaryDetection.getAndSet(false)) {
+            previousSelection = localTfv.selection
+            return@LaunchedEffect
+        }
+
         // Cross-block selection detection:
         // When user drags selection to the very start or end of a block, extend to adjacent block
         val sel = localTfv.selection
         if (!sel.collapsed && isCurrentlyActive) {
             val atStart = sel.start == 0 && sel.end > 0
             val atEnd = sel.end == block.rawText.length && sel.start < block.rawText.length
-            
+
             // Detect if selection is growing toward a boundary (not just positioned there)
             val wasAtStart = previousSelection.start == 0 && !previousSelection.collapsed
             val wasAtEnd = previousSelection.end == block.rawText.length && !previousSelection.collapsed
-            
-            if (atStart && !wasAtStart) {
-                // Selection reached start boundary — extend upward to previous block
+
+            // Only extend if previously dragging (non-collapsed) — prevents IME word-select on tap from
+            // falsely triggering cross-block selection when the word happens to start at position 0.
+            if (atStart && !wasAtStart && !previousSelection.collapsed) {
+                if (BuildConfig.DEBUG) android.util.Log.i("OtsoEditor", "Block ${block.blockId} hit START boundary → extending upward")
                 state.extendSelectionToAdjacentBlock(block.blockId, -1)
-            } else if (atEnd && !wasAtEnd) {
-                // Selection reached end boundary — extend downward to next block
+            } else if (atEnd && !wasAtEnd && !previousSelection.collapsed) {
+                if (BuildConfig.DEBUG) android.util.Log.i("OtsoEditor", "Block ${block.blockId} hit END boundary → extending downward")
                 state.extendSelectionToAdjacentBlock(block.blockId, 1)
             }
         } else if (sel.collapsed && state.multiBlockSelection.isActive) {
-            // User tapped (collapsed selection) — clear multi-block selection
-            state.clearMultiBlockSelection()
+            // Guard: Transsion IME (fixLyingSelectionRangeFromSurroundingText) collapses selection
+            // to exactly block end ~700ms after a drag. Don't clear for that specific position.
+            if (sel.start < block.rawText.length) {
+                if (BuildConfig.DEBUG) android.util.Log.i("OtsoEditor", "Block ${block.blockId} collapsed at ${sel.start} → clearing multi-block selection")
+                state.clearMultiBlockSelection()
+            } else {
+                if (BuildConfig.DEBUG) android.util.Log.i("OtsoEditor", "Block ${block.blockId} collapsed at block-end — skipping clear (IME artifact)")
+            }
         }
-        
+
         previousSelection = sel
     }
-    
+
     if (isCurrentlyActive && lastActiveBlockId != block.blockId) {
-        // When a block becomes active, we pull the authoritative selection once
-        // to sync with the global state, but we only do it if the local state is different
-        // and we are ready to receive focus.
         val authoritative = state.getSelectionForBlock(block.blockId)
-        android.util.Log.i("OtsoEditor", "OtsoBlockNode: Block ${block.blockId} became active. authoritative=$authoritative, local=${localTfv.selection}")
+        if (BuildConfig.DEBUG) android.util.Log.i("OtsoEditor", "OtsoBlockNode: Block ${block.blockId} became active. authoritative=$authoritative, local=${localTfv.selection}")
         if (localTfv.selection != authoritative) {
+            suppressBoundaryDetection.set(true)
             localTfv = localTfv.copy(selection = authoritative)
         }
         lastActiveBlockId = block.blockId
@@ -290,8 +304,17 @@ private fun OtsoBlockNode(
             annotatedString = newAnnotated,
             selection = authoritative,
         )
-    } else if (localTfv.annotatedString != newAnnotated) {
-        localTfv = localTfv.copy(annotatedString = newAnnotated)
+    } else {
+        val needsAnnotation = localTfv.annotatedString != newAnnotated
+        val authoritative = if (isCurrentlyActive) state.getSelectionForBlock(block.blockId) else null
+        val needsSelection = authoritative != null && localTfv.selection != authoritative
+        if (needsAnnotation || needsSelection) {
+            if (needsSelection) suppressBoundaryDetection.set(true)
+            localTfv = localTfv.copy(
+                annotatedString = if (needsAnnotation) newAnnotated else localTfv.annotatedString,
+                selection = if (needsSelection) authoritative!! else localTfv.selection,
+            )
+        }
     }
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
     var caretRect by remember { mutableStateOf<Rect?>(null) }

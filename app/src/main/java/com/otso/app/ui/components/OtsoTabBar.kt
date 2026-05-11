@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -102,7 +103,7 @@ fun OtsoTabBar(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             // KIRI: In-app logo — identity anchor, NON-TAPPABLE
-            val logoRes = if (otsoColors.isDarkMode) R.drawable.ic_otso_dark else R.drawable.ic_otso_light
+            val logoRes = if (otsoColors.isDarkMode) com.otso.app.BrandAssets.logoDark else com.otso.app.BrandAssets.logoLight
             Image(
                 painter = painterResource(id = logoRes),
                 contentDescription = null, // dekoratif, bukan aksi
@@ -200,7 +201,7 @@ fun OtsoTabBar(
                                         overflow = TextOverflow.Ellipsis,
                                     )
                                 }
-                                // Modified dot: bouncy spring pop-in, crisp exit
+                                // Modified asterisk: bouncy spring pop-in, crisp exit
                                 AnimatedVisibility(
                                     visible = activeTab?.isModified == true,
                                     enter = scaleIn(
@@ -212,10 +213,11 @@ fun OtsoTabBar(
                                         animationSpec = tween(durationMillis = 55),
                                     ) + fadeOut(tween(durationMillis = 55)),
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(5.dp)
-                                            .background(otsoColors.accent.copy(alpha = 0.5f), CircleShape),
+                                    Icon(
+                                        imageVector = OtsoIcons.Asterisk,
+                                        contentDescription = "Unsaved changes",
+                                        modifier = Modifier.size(10.dp),
+                                        tint = otsoColors.accent.copy(alpha = 0.8f)
                                     )
                                 }
                             }

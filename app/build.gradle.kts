@@ -64,6 +64,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     splits {
@@ -111,7 +112,6 @@ dependencies {
     implementation(libs.google.mlkit.translate)
     implementation(libs.tensorflow.lite)
     implementation(libs.tensorflow.lite.support)
-    implementation(libs.phosphor.icons)
     implementation(libs.compose.colorpicker)
 
 

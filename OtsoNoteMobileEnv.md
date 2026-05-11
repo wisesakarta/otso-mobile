@@ -8,23 +8,29 @@ The project runs two parallel environments that can be installed simultaneously 
 |---|---|---|
 | App ID | `com.otso.app` | `com.otso.app.dev` |
 | Display name | Otso | Kontio |
-| Launcher icon | White bear, blue gradient bg | White bear, orange bg (`#ff5400`) |
+| Launcher icon | White bear, blue gradient bg | Kontio icon, warm brown bg (`#826245`) |
+| Default font | General Sans (static OTF) | Excon Variable (wght axis) |
+| Accent color | `#001AE2` (Blueprint Blue) | `#826245` (Kontio Brown) |
 | Version suffix | _(none)_ | `-dev` |
 | Build command | `./gradlew installRelease` | `./gradlew installDebug` |
 
 ---
 
-## How It Works — Android Source Set Override
+## How It Works — Source Set Separation
 
-Android's Gradle build system merges resources from multiple source sets in priority order:
+We use Android's source set mechanism to separate **Production (Otso)** from **Experiment (Kontio)** without polluting the `main` source set.
 
-```
-debug/res/  >  main/res/
-```
+1.  **Assets**:
+    *   `main/res/drawable/ic_otso_*`: Production logos.
+    *   `debug/res/drawable/ic_kontio_*`: Experimental logos.
+    *   `debug/res/font/excon_variable.ttf`: Experimental variable font (Excon).
+2.  **Code Abstraction**:
+    *   Instead of hardcoding resources in UI components, we use `BrandAssets` properties.
+    *   `BrandAssets.kt` is split across source sets:
+        *   `app/src/release/java/com/otso/app/BrandAssets.kt` → `ic_otso_*`, `GeneralSans`.
+        *   `app/src/debug/java/com/otso/app/BrandAssets.kt` → `ic_kontio_*`, `ExconVariable`.
 
-Any resource file placed in `app/src/debug/res/` with the **same filename** as one in `app/src/main/res/` will automatically override the main version when building the `debug` variant. The production `release` build is never affected.
-
-No Kotlin code was changed. `R.drawable.ic_otso_dark`, `R.drawable.ic_otso_light`, and `@mipmap/ic_launcher` resolve to the correct variant at compile time automatically.
+This ensures that experimental brand names and assets never leak into the Production build.
 
 ---
 
@@ -33,26 +39,27 @@ No Kotlin code was changed. `R.drawable.ic_otso_dark`, `R.drawable.ic_otso_light
 ```
 app/src/
 │
-├── main/res/                              ← PRODUCTION assets (Otso)
-│   ├── drawable/
-│   │   ├── ic_launcher_background.xml    — Background shape, color: #0E1117
-│   │   ├── ic_otso_dark.png              — In-app logo, dark mode
-│   │   └── ic_otso_light.png             — In-app logo, light mode
-│   ├── mipmap-anydpi-v26/
-│   │   └── ic_launcher.xml               — Adaptive icon definition (API 26+)
-│   ├── mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}/
-│   │   ├── ic_launcher.png               — Legacy fallback (Pre-API 26)
-│   │   └── ic_launcher_foreground.png    — Adaptive icon foreground layer
-│   └── values/
-│       ├── colors.xml                    — ic_launcher_background: #0E1117
-│       └── strings.xml                   — app_name: "Otso"
+├── main/                                  ← SHARED LOGIC
+│   ├── java/com/otso/app/ui/             — UI code using BrandAssets
+│   └── res/drawable/                     
+│       ├── ic_otso_dark.png              — PRODUCTION logo (Dark)
+│       └── ic_otso_light.png             — PRODUCTION logo (Light)
 │
-└── debug/res/                             ← DEVELOPMENT overrides (Kontio)
-    ├── mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}/
-    │   └── ic_launcher_foreground.png    — Kontio launcher icon (orange bg)
-    └── values/
-        ├── colors.xml                    — ic_launcher_background: #ff5400
-        └── strings.xml                   — app_name: "Kontio"
+├── debug/                                 ← EXPERIMENT (Kontio)
+│   ├── java/com/otso/app/BrandAssets.kt  — Returns ic_kontio_* + ExconVariable font
+│   └── res/
+│       ├── drawable/                     
+│       │   ├── ic_kontio_dark.png        — EXPERIMENT logo (Dark)
+│       │   └── ic_kontio_light.png       — EXPERIMENT logo (Light)
+│       ├── font/
+│       │   └── excon_variable.ttf        — Variable font (wght axis)
+│       ├── mipmap-*/ic_launcher_foreground.png  — Kontio launcher icon (all densities)
+│       └── values/
+│           ├── colors.xml                — accent_primary + ic_launcher_background: #826245
+│           └── strings.xml              — app_name: Kontio
+│
+└── release/                               ← PRODUCTION (Otso)
+    └── java/com/otso/app/BrandAssets.kt  — Returns ic_otso_*
 ```
 
 ---
@@ -71,7 +78,7 @@ The launcher icon is assembled at runtime by Android from two layers defined in 
 
 | Layer | Production resolves to | Development resolves to |
 |---|---|---|
-| `<background>` | `drawable/ic_launcher_background.xml` → `#0E1117` (black) | Same XML → `#ff5400` (orange) via `debug/values/colors.xml` override |
+| `<background>` | `drawable/ic_launcher_background.xml` → `#0E1117` (black) | Same XML → `#826245` (Kontio brown) via `debug/values/colors.xml` override |
 | `<foreground>` | `mipmap-*/ic_launcher_foreground.png` (blue gradient bear) | `debug/mipmap-*/ic_launcher_foreground.png` (orange bg bear) |
 
 ---

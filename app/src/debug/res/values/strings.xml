@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Kontio</string>
+    <string name="about_title_top">avancement</string>
+    <string name="about_title_bottom">de KONTIO et OTSO</string>
+    <string name="about_manifesto">Kontio Note is an experimental branch of the Otso Department. Driven by the mission to achieve \"The Renaissance of Software\" and uphold the culture of \"Tools for Tough,\" we focus on creating high-fidelity instruments for power users who care about the craft of digital writing.</string>
 </resources>

@@ -65,14 +65,7 @@ import com.otso.app.ui.theme.stackedShadow
 import com.otso.app.viewmodel.RichTextState
 import com.otso.app.ui.theme.StaggeredItem
 
-private val DefaultHighlightPalette = listOf(
-    Color(0xFFF9EB73),
-    Color(0xFFFDBA74),
-    Color(0xFFFCA5A5),
-    Color(0xFFD8B4FE),
-    Color(0xFF93C5FD),
-    Color(0xFF86EFAC),
-)
+import com.otso.app.ui.theme.OtsoColors
 
 @Composable
 fun OtsoFormattingToolbar(
@@ -165,7 +158,7 @@ fun OtsoFormattingToolbar(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            DefaultHighlightPalette.forEachIndexed { index, color ->
+                            OtsoColors.HighlightPalette.forEachIndexed { index, color ->
                                 StaggeredItem(index = index + 1) {
                                     ColorSwatch(
                                         color = color,
@@ -183,7 +176,7 @@ fun OtsoFormattingToolbar(
 
                             customPalette.forEachIndexed { index, colorInt ->
                                 val color = colorInt.toComposeColor() ?: return@forEachIndexed
-                                StaggeredItem(index = DefaultHighlightPalette.size + index + 1) {
+                                StaggeredItem(index = OtsoColors.HighlightPalette.size + index + 1) {
                                     ColorSwatch(
                                         color = color,
                                         isDarkMode = colors.isDarkMode,
@@ -205,7 +198,7 @@ fun OtsoFormattingToolbar(
 
                         // Fixed actions — always visible, never scroll away
                         FormattingDivider(colors)
-                        StaggeredItem(index = DefaultHighlightPalette.size + customPalette.size + 1) {
+                        StaggeredItem(index = OtsoColors.HighlightPalette.size + customPalette.size + 1) {
                             CustomColorSwatch(
                                 colors = colors,
                                 onClick = {
@@ -214,7 +207,7 @@ fun OtsoFormattingToolbar(
                                 },
                             )
                         }
-                        StaggeredItem(index = DefaultHighlightPalette.size + customPalette.size + 2) {
+                        StaggeredItem(index = OtsoColors.HighlightPalette.size + customPalette.size + 2) {
                             ClearSwatch(
                                 colors = colors,
                                 onClick = {

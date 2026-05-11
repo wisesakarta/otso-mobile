@@ -21,6 +21,11 @@ import com.otso.app.ui.theme.otsoClickable
 import com.otso.app.ui.theme.SquircleShape
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 
 /**
  * AboutScreen — The Product Manifesto.
@@ -34,131 +39,77 @@ fun AboutScreen(
 ) {
     val otsoColors = MaterialTheme.colorScheme.otsoColors
     val otsoTypography = MaterialTheme.colorScheme.otsoTypography
-    val otsoSpacing = MaterialTheme.colorScheme.otsoSpacing
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(otsoColors.background)
-            .technicalGrain(alpha = 0.03f)
+            .technicalGrain(alpha = 0.02f) // Subtler grain for Muji feel
             .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
-        // 1. Navigation Header
-        StaggeredItem(index = 0) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(64.dp),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-            ) {
-                OtsoBackButton(
-                    onClick = onBackClick,
-                    color = otsoColors.ink
-                )
-            }
+        // 1. Subtle Navigation
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp)
+        ) {
+            OtsoBackButton(
+                onClick = onBackClick,
+                color = otsoColors.ink.copy(alpha = 0.4f) // Modest/Low-ego back button
+            )
         }
 
-        // 2. Content
         Column(
             modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = otsoSpacing.editorialMargin)
+                .fillMaxSize()
+                .padding(horizontal = 48.dp),
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.weight(0.15f))
 
-            // Logo & Version
-            StaggeredItem(index = 1) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            // 2. Hero (Sharp Squircle - The Identity)
+            StaggeredItem(index = 0) {
+                val logoRes = if (otsoColors.isDarkMode) com.otso.app.BrandAssets.logoDark else com.otso.app.BrandAssets.logoLight
+                Box(
+                    modifier = Modifier
+                        .size(160.dp)
+                        .clip(com.otso.app.ui.theme.SquircleShape(12.dp))
+                        .background(if (otsoColors.isDarkMode) otsoColors.surface else otsoColors.edge.copy(alpha = 0.4f)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    val logoRes = if (otsoColors.isDarkMode) R.drawable.ic_otso_dark else R.drawable.ic_otso_light
                     Image(
                         painter = painterResource(id = logoRes),
-                        contentDescription = "Otso Logo",
-                        modifier = Modifier.height(48.dp)
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    val context = androidx.compose.ui.platform.LocalContext.current
-                    val versionName = try {
-                        context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "Unknown"
-                    } catch (e: Exception) {
-                        "Unknown"
-                    }
-                    
-                    Text(
-                        text = "v$versionName",
-                        style = otsoTypography.uiTechnical.copy(letterSpacing = 0.3.sp),
-                        color = otsoColors.muted,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(0.7f)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(64.dp))
 
-            StaggeredItem(index = 2) {
+            // 3. Manifesto (Plain & Honest)
+            StaggeredItem(index = 1) {
                 Text(
-                    text = "Designed to fade away, so your words can stand out.",
-                    style = otsoTypography.uiTitleLarge.copy(
-                        lineHeight = 34.sp,
-                        letterSpacing = (-0.25).sp,
-                    ),
-                    color = otsoColors.ink,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            StaggeredItem(index = 3) {
-                Text(
-                    text = "Built with care for those who value focus.",
+                    text = androidx.compose.ui.res.stringResource(id = com.otso.app.R.string.about_manifesto),
                     style = otsoTypography.uiLabel.copy(
-                        lineHeight = 21.sp,
-                        letterSpacing = 0.1.sp,
+                        lineHeight = 24.sp,
+                        letterSpacing = 0.01.em,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     ),
-                    color = otsoColors.muted,
+                    color = otsoColors.ink.copy(alpha = 0.6f)
                 )
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Utility Links
-            val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
-            StaggeredItem(index = 4) {
-                @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    UtilityChip(
-                        icon = com.otso.app.ui.components.OtsoIcons.PaperPlaneTilt,
-                        label = "Send Feedback",
-                        onClick = { uriHandler.openUri("mailto:otsolabs@gmail.com") }
-                    )
-                    UtilityChip(
-                        icon = com.otso.app.ui.components.OtsoIcons.Code,
-                        label = "Source Code & Roadmap",
-                        onClick = { uriHandler.openUri("https://github.com/wisesakarta/otso-mobile.git") }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(48.dp))
-
-            StaggeredItem(index = 5) {
-                Text(
-                    text = "Technical Standard • wisesakarta",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 32.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    style = otsoTypography.uiTechnical.copy(fontSize = 12.sp),
-                    color = otsoColors.ink.copy(alpha = 0.4f)
-                )
-            }
+            // 4. Functional Footer (Muji Minimalist)
+            Text(
+                text = "Technical Standard v2.2.0",
+                style = otsoTypography.uiTechnical.copy(fontSize = 11.sp, letterSpacing = 0.02.em),
+                color = otsoColors.muted.copy(alpha = 0.3f),
+                modifier = Modifier.padding(bottom = 32.dp)
+            )
         }
-
     }
 }
 

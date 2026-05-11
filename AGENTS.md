@@ -19,6 +19,7 @@ Sebelum mengeksekusi instruksi apa pun, Agent **wajib** melakukan prosedur berik
 6.  [cite_start]**Verify Before Handover**: Semua output harus lolos build, lint, tes, dan validasi runtime di lingkungan sandbox[cite: 6].
 7.  **No-Hoax Policy & Evidence-Based Reporting**: Selalu lakukan verifikasi silang antara teks output, status file, dan *screenshot*. Dilarang memberikan informasi atau asumsi tanpa bukti nyata di log atau terminal untuk menghindari misinformasi (*hoax*). Analisis mendalam wajib dilakukan sebelum memberikan instruksi eksekusi.
 8.  **No Surrender Until Target Achieved**: Dilarang keras berhenti pada fallback, menyerah, atau pasrah ketika satu task/target sudah di-*load*. Agent wajib terus mencari jalur solusi yang aman dan berbasis bukti sampai target tercapai, kecuali terdapat risiko destruktif, pelanggaran keamanan, atau instruksi eksplisit dari pemilik untuk berhenti.
+9.  **Research First & User Insight Policy**: Sebelum melakukan perubahan besar pada UI/UX atau arsitektur, Agent wajib melakukan riset eksternal (benchmarking/best practices) dan mencari wawasan (top insights) serta feedback pengguna untuk memastikan keputusan engineering berbasis data, bukan asumsi.
 
 ---
 
@@ -207,3 +208,33 @@ Aturan tambahan:
 2.  Dilarang menyimpan artifact dengan suffix download/browser seperti `(1)`, `(2)`, `copy`, `final`, `latest`, atau `new`.
 3.  File yang dipakai runtime Android harus berada di `app/src/main/assets/` dengan nama canonical yang sama dengan konstanta engine.
 4.  Jika file baru datang dari Colab/download dengan suffix sementara, Agent wajib memverifikasi hash/shape/type terlebih dahulu, lalu menyalin ke nama canonical dan membersihkan duplikat agar APK tetap lightweight.
+---
+
+### XIII. MEMORY & PROCESS GOVERNANCE (MANDATORY)
+
+Untuk mencegah kegagalan kompilasi akibat memori (OOM) dan konflik proses, Agent **WAJIB** melakukan hal berikut sebelum menjalankan `gradlew`:
+
+1.  **Kill Stray Processes**: Jalankan `taskkill /F /IM java.exe` (atau `./gradlew --stop`) untuk memastikan tidak ada daemon yang menggantung dari sesi sebelumnya.
+2.  **Memory Audit**: Periksa ketersediaan memori virtual. Jika memori tersedia < 4GB, berikan peringatan kepada pengguna sebelum melanjutkan.
+3.  **Heap Restriction**: Selalu gunakan limit `-Xmx512m` atau `-Xmx1g` (sesuai `gradle.properties`) dan jangan pernah melebihi batas tersebut tanpa izin.
+
+---
+
+### XIV. SOURCE SET SOVEREIGNTY (PROD VS DEBUG)
+
+Dilarang keras melakukan halusinasi yang mencampurkan fitur eksperimental ke dalam basis kode Produksi.
+
+1.  **MAIN = SACRED**: Folder `app/src/main` adalah wilayah Produksi. Dilarang menambah aset eksperimen (seperti brand Kontio) ke dalam `main` jika tujuan akhirnya hanya untuk versi Debug.
+2.  **DEBUG = SANDBOX**: Gunakan `app/src/debug` untuk semua eksperimen brand, icon baru, atau fitur beta.
+3.  **Asset Naming**: 
+    *   Aset Produksi: `ic_otso_dark`, `ic_otso_light`.
+    *   Aset Eksperimen: `ic_kontio_dark`, `ic_kontio_light`.
+4.  **No Code Leakage**: Gunakan `BuildConfig.DEBUG` atau pemisahan file via source set (`src/release` vs `src/debug`) untuk memastikan kode eksperimental tidak ter-compile ke versi Release.
+
+---
+
+### XV. NO-HALLUCINATION & DOCUMENTATION INTEGRITY
+
+1.  **Evidence-Based Action**: Agent dilarang berasumsi file sudah ada atau sudah berubah. Selalu gunakan `ls`, `grep`, atau `git status` untuk verifikasi fakta di lapangan.
+2.  **Truth in Docs**: Setiap perubahan arsitektur atau aset wajib dicatat di `OtsoNoteMobileEnv.md` agar sinkron dengan kenyataan codebase.
+3.  **Serious Execution**: Kegagalan mematuhi batasan Prod/Debug dianggap sebagai pelanggaran serius terhadap protokol stabilitas proyek.
