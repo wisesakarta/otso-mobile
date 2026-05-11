@@ -47,6 +47,7 @@ fun OtsoKeyboardToolbar(
     onRedo: () -> Unit = {},
     canUndo: Boolean = false,
     canRedo: Boolean = false,
+    onSelectAll: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme.otsoColors
@@ -76,91 +77,122 @@ fun OtsoKeyboardToolbar(
                     .horizontalScroll(scrollState)
                     .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // Undo
-                StaggeredItem(index = 0) {
-                    ToolbarButton(
-                        icon = OtsoIcons.Undo,
-                        contentDescription = "Undo",
-                        enabled = canUndo,
-                        colors = colors,
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onUndo()
-                        },
-                    )
-                }
-
-                // Redo
-                StaggeredItem(index = 1) {
-                    ToolbarButton(
-                        icon = OtsoIcons.Redo,
-                        contentDescription = "Redo",
-                        enabled = canRedo,
-                        colors = colors,
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onRedo()
-                        },
-                    )
-                }
-
-                ToolbarDivider(colors)
-
-                // Scan
-                StaggeredItem(index = 2) {
-                    ToolbarButton(
-                        icon = OtsoIcons.Camera,
-                        contentDescription = "Scan Document",
-                        colors = colors,
-                        modifier = Modifier.offset(y = (-0.2).dp), // Heavier shape needs less lift
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onScanClick()
-                        },
-                    )
-                }
-
-                // Monospace toggle
-                StaggeredItem(index = 3) {
-                    ToolbarButton(
-                        icon = OtsoIcons.LetterM,
-                        contentDescription = if (isMonospaceActive) "Disable Monospace Font" else "Enable Monospace Font",
-                        isActive = isMonospaceActive,
-                        accent = accent,
-                        colors = colors,
-                        modifier = Modifier.offset(y = (-0.2).dp), // Vectors are centered perfectly
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onMonospaceToggle()
-                        },
-                    )
-                }
-
-                ToolbarDivider(colors)
-
-                // Insert keys
-                val insertKeys = listOf(
-                    OtsoIcons.TabKey to "\t",
-                    OtsoIcons.Parentheses to "()",
-                    OtsoIcons.Brackets to "[]",
-                    OtsoIcons.Quotes to "\"\"",
-                    OtsoIcons.Slash to "/",
-                )
-
-                insertKeys.forEachIndexed { index, (icon, insert) ->
-                    StaggeredItem(index = index + 5) {
+                // DNA: Logical Grouping (Undo/Redo)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Undo
+                    StaggeredItem(index = 0) {
                         ToolbarButton(
-                            icon = icon,
-                            contentDescription = "Insert control",
+                            icon = OtsoIcons.Undo,
+                            contentDescription = "Undo",
+                            enabled = canUndo,
                             colors = colors,
-                            modifier = Modifier.offset(y = (-0.2).dp), // Unified alignment
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onKeyInsert(insert)
+                                onUndo()
                             },
                         )
+                    }
+
+                    // Redo
+                    StaggeredItem(index = 1) {
+                        ToolbarButton(
+                            icon = OtsoIcons.Redo,
+                            contentDescription = "Redo",
+                            enabled = canRedo,
+                            colors = colors,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onRedo()
+                            },
+                        )
+                    }
+                }
+
+                ToolbarDivider(colors)
+
+                // DNA: Utilities Group
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Scan
+                    StaggeredItem(index = 2) {
+                        ToolbarButton(
+                            icon = OtsoIcons.Camera,
+                            contentDescription = "Scan Document",
+                            colors = colors,
+                            modifier = Modifier.offset(y = (-0.2).dp),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onScanClick()
+                            },
+                        )
+                    }
+
+                    // Monospace toggle
+                    StaggeredItem(index = 3) {
+                        ToolbarButton(
+                            icon = OtsoIcons.LetterM,
+                            contentDescription = if (isMonospaceActive) "Disable Monospace Font" else "Enable Monospace Font",
+                            isActive = isMonospaceActive,
+                            accent = accent,
+                            colors = colors,
+                            modifier = Modifier.offset(y = (-0.2).dp),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onMonospaceToggle()
+                            },
+                        )
+                    }
+
+                    // Select All
+                    StaggeredItem(index = 4) {
+                        ToolbarButton(
+                            icon = OtsoIcons.SelectAll,
+                            contentDescription = "Select All",
+                            colors = colors,
+                            modifier = Modifier.offset(y = (-0.2).dp),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onSelectAll()
+                            },
+                        )
+                    }
+                }
+
+                ToolbarDivider(colors)
+
+                // DNA: Quick Insert Group
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val insertKeys = listOf(
+                        OtsoIcons.TabKey to "\t",
+                        OtsoIcons.Parentheses to "()",
+                        OtsoIcons.Brackets to "[]",
+                        OtsoIcons.Quotes to "\"\"",
+                        OtsoIcons.Slash to "/",
+                    )
+
+                    insertKeys.forEachIndexed { index, (icon, insert) ->
+                        StaggeredItem(index = index + 6) {
+                            ToolbarButton(
+                                icon = icon,
+                                contentDescription = "Insert control",
+                                colors = colors,
+                                modifier = Modifier.offset(y = (-0.2).dp),
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    onKeyInsert(insert)
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -168,7 +200,7 @@ fun OtsoKeyboardToolbar(
             ToolbarDivider(colors)
 
             // FIXED END: Find — Accent pill
-            StaggeredItem(index = 10) { // Delayed entry for the final action
+            StaggeredItem(index = 12) { // Delayed entry for the final action
                 Box(
                     modifier = Modifier
                         .padding(end = 4.dp, start = 4.dp)
@@ -188,9 +220,8 @@ fun OtsoKeyboardToolbar(
                     Text(
                         text = "find",
                         style = OtsoTypography.uiTechnical.copy(
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
                         ),
                         color = Color.White,
                         textAlign = TextAlign.Center,
@@ -237,7 +268,7 @@ private fun ToolbarButton(
             Icon(
                 imageVector = icon,
                 contentDescription = null, // Handled by Box semantics
-                modifier = Modifier.size(18.dp), // Optical reduction from 20dp
+                modifier = Modifier.size(20.dp), 
                 tint = when {
                     !enabled -> colors.muted.copy(alpha = 0.25f)
                     isActive -> accent

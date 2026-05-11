@@ -225,6 +225,10 @@ private fun OtsoBlockNode(
     var lastActiveBlockId by remember { mutableStateOf<String?>(null) }
     val isCurrentlyActive = state.activeBlockId == block.blockId
 
+    // Multi-block selection visual highlight
+    val multiBlockRange = state.getMultiBlockSelectionRange(block.blockId)
+    val hasMultiBlockHighlight = multiBlockRange != null
+
     var localTfv by remember(block.blockId) {
         mutableStateOf(
             TextFieldValue(
@@ -234,8 +238,36 @@ private fun OtsoBlockNode(
         )
     }
 
+    // Track previous selection to detect boundary-reaching drags
+    var previousSelection by remember { mutableStateOf(localTfv.selection) }
+
     LaunchedEffect(localTfv.selection) {
         android.util.Log.d("OtsoEditor", "Block ${block.blockId} selection changed to ${localTfv.selection}")
+        
+        // Cross-block selection detection:
+        // When user drags selection to the very start or end of a block, extend to adjacent block
+        val sel = localTfv.selection
+        if (!sel.collapsed && isCurrentlyActive) {
+            val atStart = sel.start == 0 && sel.end > 0
+            val atEnd = sel.end == block.rawText.length && sel.start < block.rawText.length
+            
+            // Detect if selection is growing toward a boundary (not just positioned there)
+            val wasAtStart = previousSelection.start == 0 && !previousSelection.collapsed
+            val wasAtEnd = previousSelection.end == block.rawText.length && !previousSelection.collapsed
+            
+            if (atStart && !wasAtStart) {
+                // Selection reached start boundary — extend upward to previous block
+                state.extendSelectionToAdjacentBlock(block.blockId, -1)
+            } else if (atEnd && !wasAtEnd) {
+                // Selection reached end boundary — extend downward to next block
+                state.extendSelectionToAdjacentBlock(block.blockId, 1)
+            }
+        } else if (sel.collapsed && state.multiBlockSelection.isActive) {
+            // User tapped (collapsed selection) — clear multi-block selection
+            state.clearMultiBlockSelection()
+        }
+        
+        previousSelection = sel
     }
     
     if (isCurrentlyActive && lastActiveBlockId != block.blockId) {
@@ -274,86 +306,108 @@ private fun OtsoBlockNode(
         }
     }
 
-    BasicTextField(
-        value = localTfv,
-        onValueChange = { newTfv ->
-            localTfv = newTfv
-            val textChanged = block.rawText != newTfv.text
-            val selectionChanged = state.getSelectionForBlock(block.blockId) != newTfv.selection
+    // Multi-block selection overlay color
+    val multiBlockSelectionAlpha by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (hasMultiBlockHighlight) 0.28f else 0f,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 150),
+        label = "multi_block_sel_alpha",
+    )
 
-            if (textChanged) {
-                val newlineIndex = newTfv.text.indexOf('\n')
-                if (newlineIndex >= 0) {
-                    val cleanText = newTfv.text.removeRange(newlineIndex, newlineIndex + 1)
-                    val cleanTfv = newTfv.copy(text = cleanText, selection = TextRange(newlineIndex))
-                    state.updateBlock(block.blockId, cleanTfv)
-                    state.splitBlockAtCursor(block.blockId, newlineIndex)
-                } else {
-                    state.updateBlock(block.blockId, newTfv)
-                }
-            } else if (selectionChanged) {
-                state.updateBlock(block.blockId, newTfv)
-            }
-        },
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .wrapContentHeight()
-            .focusRequester(focusRequester)
-            .onFocusChanged { focusState ->
-                if (focusState.isFocused && state.activeBlockId != block.blockId) {
-                    state.setActiveBlock(block.blockId)
+            .then(
+                if (multiBlockSelectionAlpha > 0f) {
+                    Modifier.background(colors.accent.copy(alpha = multiBlockSelectionAlpha))
+                } else {
+                    Modifier
                 }
-            }
-            .onPreviewKeyEvent { keyEvent ->
-                if (
-                    keyEvent.type == KeyEventType.KeyDown &&
-                    keyEvent.key == Key.Backspace
-                ) {
-                    val cursorPosition = state.getSelectionForBlock(block.blockId).start
-                    if (cursorPosition == 0) {
-                        state.mergeBlockWithPrevious(block.blockId)
-                        return@onPreviewKeyEvent true
+            )
+    ) {
+        BasicTextField(
+            value = localTfv,
+            onValueChange = { newTfv ->
+                localTfv = newTfv
+                val textChanged = block.rawText != newTfv.text
+                val selectionChanged = state.getSelectionForBlock(block.blockId) != newTfv.selection
+
+                if (textChanged) {
+                    // Text change clears multi-block selection
+                    state.clearMultiBlockSelection()
+                    
+                    val newlineIndex = newTfv.text.indexOf('\n')
+                    if (newlineIndex >= 0) {
+                        val cleanText = newTfv.text.removeRange(newlineIndex, newlineIndex + 1)
+                        val cleanTfv = newTfv.copy(text = cleanText, selection = TextRange(newlineIndex))
+                        state.updateBlock(block.blockId, cleanTfv)
+                        state.splitBlockAtCursor(block.blockId, newlineIndex)
+                    } else {
+                        state.updateBlock(block.blockId, newTfv)
+                    }
+                } else if (selectionChanged) {
+                    state.updateBlock(block.blockId, newTfv)
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .focusRequester(focusRequester)
+                .onFocusChanged { focusState ->
+                    if (focusState.isFocused && state.activeBlockId != block.blockId) {
+                        state.setActiveBlock(block.blockId)
                     }
                 }
-                false
-            }
-            .background(colors.background)
-            .padding(horizontal = OtsoSpacing.globalMargin, vertical = 4.dp),
-        textStyle = editorTextStyle,
-        cursorBrush = SolidColor(colors.accent),
-        visualTransformation = VisualTransformation.None,
-        keyboardOptions = KeyboardOptions(
-            capitalization = KeyboardCapitalization.None,
-            autoCorrectEnabled = false,
-            keyboardType = KeyboardType.Text,
-            imeAction = ImeAction.Default,
-        ),
-        keyboardActions = KeyboardActions.Default,
-        maxLines = Int.MAX_VALUE,
-        onTextLayout = { textLayoutResult ->
-            if (state.activeBlockId == block.blockId) {
-                val cursorOffset = localTfv.selection.end.coerceIn(0, localTfv.text.length)
-                val cursorRect = textLayoutResult.getCursorRect(cursorOffset)
-                caretRect = androidx.compose.ui.geometry.Rect(
-                    left = cursorRect.left,
-                    top = cursorRect.top,
-                    right = cursorRect.right,
-                    bottom = cursorRect.bottom
-                )
-            }
-        },
-        decorationBox = { innerTextField ->
-            Box(modifier = Modifier.bringIntoViewRequester(bringIntoViewRequester)) {
-                if (showPlaceholder) {
-                    Text(
-                        text = "Start writing...",
-                        style = editorTextStyle.copy(
-                            color = colors.muted.copy(alpha = 0.28f),
-                        ),
+                .onPreviewKeyEvent { keyEvent ->
+                    if (
+                        keyEvent.type == KeyEventType.KeyDown &&
+                        keyEvent.key == Key.Backspace
+                    ) {
+                        val cursorPosition = state.getSelectionForBlock(block.blockId).start
+                        if (cursorPosition == 0) {
+                            state.mergeBlockWithPrevious(block.blockId)
+                            return@onPreviewKeyEvent true
+                        }
+                    }
+                    false
+                }
+                .background(colors.background)
+                .padding(horizontal = OtsoSpacing.globalMargin, vertical = 4.dp),
+            textStyle = editorTextStyle,
+            cursorBrush = SolidColor(colors.accent),
+            visualTransformation = VisualTransformation.None,
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.None,
+                autoCorrectEnabled = false,
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Default,
+            ),
+            keyboardActions = KeyboardActions.Default,
+            maxLines = Int.MAX_VALUE,
+            onTextLayout = { textLayoutResult ->
+                if (state.activeBlockId == block.blockId) {
+                    val cursorOffset = localTfv.selection.end.coerceIn(0, localTfv.text.length)
+                    val cursorRect = textLayoutResult.getCursorRect(cursorOffset)
+                    caretRect = androidx.compose.ui.geometry.Rect(
+                        left = cursorRect.left,
+                        top = cursorRect.top,
+                        right = cursorRect.right,
+                        bottom = cursorRect.bottom
                     )
                 }
-                innerTextField()
-            }
-        },
-    )
+            },
+            decorationBox = { innerTextField ->
+                Box(modifier = Modifier.bringIntoViewRequester(bringIntoViewRequester)) {
+                    if (showPlaceholder) {
+                        Text(
+                            text = "Start writing...",
+                            style = editorTextStyle.copy(
+                                color = colors.muted.copy(alpha = 0.28f),
+                            ),
+                        )
+                    }
+                    innerTextField()
+                }
+            },
+        )
+    }
 }

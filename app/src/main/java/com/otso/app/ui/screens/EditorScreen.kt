@@ -64,6 +64,8 @@ import com.otso.app.ui.components.OtsoKeyboardToolbar
 import com.otso.app.ui.components.OtsoColorWheelDialog
 import com.otso.app.ui.components.OtsoUnsavedDialog
 import com.otso.app.ui.components.OtsoMenuSheet
+import com.otso.app.ui.components.OtsoIcons
+import com.otso.app.BuildConfig
 import com.otso.app.ui.theme.OtsoSpacing
 import com.otso.app.ui.theme.otsoColors
 import com.otso.app.ui.theme.otsoSpacing
@@ -618,6 +620,7 @@ fun EditorScreen(
                         onRedo = { activeRichTextState?.redo() },
                         canUndo = activeRichTextState?.canUndo ?: false,
                         canRedo = activeRichTextState?.canRedo ?: false,
+                        onSelectAll = { activeRichTextState?.selectAll() },
                     )
                 }
             }
@@ -712,17 +715,40 @@ fun EditorScreen(
                 slideOutVertically(spring(stiffness = Spring.StiffnessMedium)) { it / 2 },
             modifier = Modifier.align(Alignment.BottomCenter),
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(OtsoColors.Accent.copy(alpha = 0.08f))
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
-            ) {
-                Text(
-                    text = lastError.value,
-                    style = OtsoTypography.uiCaption,
-                    color = OtsoColors.Accent,
-                )
+            if (com.otso.app.BuildConfig.DEBUG) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(OtsoColors.Accent.copy(alpha = 0.08f))
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = OtsoIcons.WarningCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = OtsoColors.Accent
+                    )
+                    Text(
+                        text = lastError.value,
+                        style = OtsoTypography.uiCaption,
+                        color = OtsoColors.Accent,
+                    )
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(OtsoColors.Accent.copy(alpha = 0.08f))
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                ) {
+                    Text(
+                        text = lastError.value,
+                        style = OtsoTypography.uiCaption,
+                        color = OtsoColors.Accent,
+                    )
+                }
             }
         }
 
