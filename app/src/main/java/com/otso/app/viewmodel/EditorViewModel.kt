@@ -189,6 +189,8 @@ class EditorViewModel(
                         font = FontState(editorFontSize = preferredFontSizeSp),
                         customFontPath = initialFontPath,
                         customFontName = initialFontName,
+                        foundryFolderUri = current.foundryFolderUri,
+                        activeFoundryFamilyName = current.activeFoundryFamilyName,
                         isFontInitialized = current.isFontInitialized || !needsFontScan,
                     )
                 }
@@ -208,6 +210,8 @@ class EditorViewModel(
                         font = FontState(editorFontSize = preferredFontSizeSp),
                         customFontPath = initialFontPath,
                         customFontName = initialFontName,
+                        foundryFolderUri = current.foundryFolderUri,
+                        activeFoundryFamilyName = current.activeFoundryFamilyName,
                         isFontInitialized = current.isFontInitialized || !needsFontScan,
                     )
                 }

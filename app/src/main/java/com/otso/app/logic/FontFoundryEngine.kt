@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -193,13 +194,24 @@ class FontFoundryEngine(
     fun setFoundryFolder(uri: Uri) {
         val uriString = uri.toString()
         android.util.Log.i(FOUNDRY_TAG, "[SET-1] setFoundryFolder called: uri=${uriString.take(80)}")
-        android.util.Log.d(FOUNDRY_TAG, "[SET-1] current foundryFolderUri=${_uiState.value.foundryFolderUri?.take(80)}, isFontLoading=${_uiState.value.isFontLoading}")
+        android.util.Log.d(FOUNDRY_TAG, "[SET-1] stateUri=${_uiState.value.foundryFolderUri?.take(80)}, isFontLoading=${_uiState.value.isFontLoading}")
 
-        if (uriString == _uiState.value.foundryFolderUri) {
-            android.util.Log.i(FOUNDRY_TAG, "[SET-2] same URI → force rescan path")
-            scope.launch {
-                try {
-                    _uiState.update { it.copy(isFontLoading = true) }
+        _uiState.update { it.copy(isFontLoading = true) }
+        scope.launch {
+            try {
+                // Read from prefs (not state): state can be wiped by ViewModel init race,
+                // causing a false "new URI" path when the URI is already stored in DataStore.
+                // If we write the same value DataStore already holds, it won't emit → flow
+                // never fires → isFontLoading stuck true forever.
+                val currentPrefsUri = withContext(Dispatchers.IO) {
+                    OtsoPreferences.folderFoundryUriFlow(application).first()
+                }
+                android.util.Log.i(FOUNDRY_TAG, "[SET-2] currentPrefsUri=${currentPrefsUri?.take(80)}, sameAsSelected=${uriString == currentPrefsUri}")
+
+                if (uriString == currentPrefsUri) {
+                    // URI already stored in prefs → distinctUntilChanged() on initializeFontFlow
+                    // would suppress the DataStore re-emission → must rescan directly.
+                    android.util.Log.i(FOUNDRY_TAG, "[SET-3] same URI in prefs → direct rescan")
                     val startTime = System.currentTimeMillis()
                     val foundries = withContext(Dispatchers.IO) {
                         try {
@@ -212,13 +224,12 @@ class FontFoundryEngine(
                         }
                     }
                     val elapsed = System.currentTimeMillis() - startTime
-                    android.util.Log.i(FOUNDRY_TAG, "[SET-RESCAN] scan done in ${elapsed}ms, families=${foundries.size}")
-                    if (elapsed < 600L) {
-                        kotlinx.coroutines.delay(600L - elapsed)
-                    }
+                    android.util.Log.i(FOUNDRY_TAG, "[SET-RESCAN] done in ${elapsed}ms, families=${foundries.size}")
+                    if (elapsed < 600L) kotlinx.coroutines.delay(600L - elapsed)
                     val firstFamily = foundries.firstOrNull()
                     _uiState.update { state ->
                         state.copy(
+                            foundryFolderUri = uriString,
                             font = state.font.copy(
                                 activeFoundryFamily = firstFamily?.composeFamily,
                                 activeFoundryVariantCount = firstFamily?.variantCount ?: 0,
@@ -233,42 +244,35 @@ class FontFoundryEngine(
                             isFontLoading = false,
                         )
                     }
-                    android.util.Log.i(FOUNDRY_TAG, "[SET-RESCAN] state update done. isFontLoading=false, family=${firstFamily?.name}")
-                } catch (e: Exception) {
-                    android.util.Log.e(FOUNDRY_TAG, "[SET-RESCAN-FATAL] uncaught exception (${e.javaClass.simpleName}): ${e.message}", e)
-                    _uiState.update { it.copy(isFontLoading = false, fileAccessError = "Rescan failed: ${e.message}") }
-                }
-            }
-            return
-        }
-
-        android.util.Log.i(FOUNDRY_TAG, "[SET-3] new URI → persisting permission")
-        _uiState.update { it.copy(isFontLoading = true) }
-        scope.launch {
-            try {
-                persistFoundryUriPermission(uri)
-                val permOk = hasPersistedUriPermission(uri)
-                android.util.Log.i(FOUNDRY_TAG, "[SET-4] hasPersistedUriPermission=$permOk after takePersistable")
-                val allPersistedUris = application.contentResolver.persistedUriPermissions
-                    .map { "${it.uri}  read=${it.isReadPermission}" }
-                android.util.Log.d(FOUNDRY_TAG, "[SET-4] all persisted URIs (${allPersistedUris.size}): ${allPersistedUris.joinToString(" | ")}")
-
-                if (permOk) {
-                    android.util.Log.i(FOUNDRY_TAG, "[SET-5] permission OK → saving to prefs (will trigger initializeFontFlow)")
-                    OtsoPreferences.setFolderFoundryUri(application, uriString)
-                    OtsoPreferences.setCustomFontPath(application, null)
-                    OtsoPreferences.setCustomFontName(application, null)
+                    android.util.Log.i(FOUNDRY_TAG, "[SET-RESCAN] done. isFontLoading=false, family=${firstFamily?.name}")
                 } else {
-                    android.util.Log.e(FOUNDRY_TAG, "[SET-5a] permission NOT persisted → aborting, isFontLoading=false")
-                    _uiState.update {
-                        it.copy(
-                            isFontLoading = false,
-                            fileAccessError = "Unable to persist font folder access. Please try again.",
-                        )
+                    // New (or first-time) URI → persist SAF permission, write to prefs.
+                    // initializeFontFlow will receive the new emission and handle the scan.
+                    android.util.Log.i(FOUNDRY_TAG, "[SET-4] new URI → persisting SAF permission")
+                    persistFoundryUriPermission(uri)
+                    val permOk = hasPersistedUriPermission(uri)
+                    android.util.Log.i(FOUNDRY_TAG, "[SET-5] hasPersistedUriPermission=$permOk")
+                    val allPersistedUris = application.contentResolver.persistedUriPermissions
+                        .map { "${it.uri}  read=${it.isReadPermission}" }
+                    android.util.Log.d(FOUNDRY_TAG, "[SET-5] all persisted URIs (${allPersistedUris.size}): ${allPersistedUris.joinToString(" | ")}")
+
+                    if (permOk) {
+                        android.util.Log.i(FOUNDRY_TAG, "[SET-6] permission OK → saving to prefs (initializeFontFlow will scan)")
+                        OtsoPreferences.setFolderFoundryUri(application, uriString)
+                        OtsoPreferences.setCustomFontPath(application, null)
+                        OtsoPreferences.setCustomFontName(application, null)
+                    } else {
+                        android.util.Log.e(FOUNDRY_TAG, "[SET-6a] permission NOT persisted → isFontLoading=false")
+                        _uiState.update {
+                            it.copy(
+                                isFontLoading = false,
+                                fileAccessError = "Unable to persist font folder access. Please try again.",
+                            )
+                        }
                     }
                 }
             } catch (e: Exception) {
-                android.util.Log.e(FOUNDRY_TAG, "[SET-FATAL] uncaught exception in setFoundryFolder coroutine (${e.javaClass.simpleName}): ${e.message}", e)
+                android.util.Log.e(FOUNDRY_TAG, "[SET-FATAL] (${e.javaClass.simpleName}): ${e.message}", e)
                 _uiState.update { it.copy(isFontLoading = false, fileAccessError = "Font setup failed: ${e.message}") }
             }
         }
