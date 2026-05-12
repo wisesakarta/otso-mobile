@@ -719,7 +719,7 @@ fun EditorScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(OtsoColors.Accent.copy(alpha = 0.08f))
+                        .background(otsoColors.accent.copy(alpha = 0.08f))
                         .padding(horizontal = 20.dp, vertical = 8.dp),
                     verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -728,25 +728,25 @@ fun EditorScreen(
                         imageVector = OtsoIcons.WarningCircle,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
-                        tint = OtsoColors.Accent
+                        tint = otsoColors.accent
                     )
                     Text(
                         text = lastError.value,
                         style = OtsoTypography.uiCaption,
-                        color = OtsoColors.Accent,
+                        color = otsoColors.accent,
                     )
                 }
             } else {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(OtsoColors.Accent.copy(alpha = 0.08f))
+                        .background(otsoColors.accent.copy(alpha = 0.08f))
                         .padding(horizontal = 20.dp, vertical = 8.dp),
                 ) {
                     Text(
                         text = lastError.value,
                         style = OtsoTypography.uiCaption,
-                        color = OtsoColors.Accent,
+                        color = otsoColors.accent,
                     )
                 }
             }

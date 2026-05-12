@@ -71,9 +71,9 @@ object OtsoColors {
     val LightSurface     = Color(0xFFF2F4F4)
     val LightShadow      = Color(0x1A2A3A5A) // soft navy-tinted gray
 
-    val Accent           = Color(0xFF001AE2)
-    val AccentMuted      = Color(0x2E001AE2) // 18% Opacity Blueprint Blue
-    val SelectionBackground = Color(0x73001AE2)
+    val Accent              = Color(0xFF826245)
+    val AccentMuted         = Color(0x2E826245)
+    val SelectionBackground = Color(0x73826245)
     val Black            = Color(0xFF000000)
     val Transparent      = Color(0x00000000)
     val DarkShadow       = Color(0xFF000000) // deep midnight-black
