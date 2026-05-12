@@ -9,7 +9,7 @@ object BrandAssets {
     val logoLight = R.drawable.ic_kontio_light
 
     val defaultFont = FontFamily(
-        Font(R.font.excon_variable, FontWeight.Light),
-        Font(R.font.excon_variable, FontWeight.Normal),
+        Font(R.font.excon_light,   FontWeight.Light),
+        Font(R.font.excon_regular, FontWeight.Normal),
     )
 }

@@ -9,7 +9,7 @@ The project runs two parallel environments that can be installed simultaneously 
 | App ID | `com.otso.app` | `com.otso.app.dev` |
 | Display name | Otso | Kontio |
 | Launcher icon | White bear, blue gradient bg | Kontio icon, warm brown bg (`#826245`) |
-| Default font | General Sans (static OTF) | Excon Variable (wght axis) |
+| Default font | General Sans (static OTF) | Excon Light + Regular (static OTF, 2 weights) |
 | Accent color | `#001AE2` (Blueprint Blue) | `#826245` (Kontio Brown) |
 | Version suffix | _(none)_ | `-dev` |
 | Build command | `./gradlew installRelease` | `./gradlew installDebug` |
@@ -23,7 +23,7 @@ We use Android's source set mechanism to separate **Production (Otso)** from **E
 1.  **Assets**:
     *   `main/res/drawable/ic_otso_*`: Production logos.
     *   `debug/res/drawable/ic_kontio_*`: Experimental logos.
-    *   `debug/res/font/excon_variable.ttf`: Experimental variable font (Excon).
+    *   `debug/res/font/excon_light.otf`, `excon_regular.otf`: Excon static fonts (Light + Regular only).
 2.  **Code Abstraction**:
     *   Instead of hardcoding resources in UI components, we use `BrandAssets` properties.
     *   `BrandAssets.kt` is split across source sets:
@@ -46,17 +46,19 @@ app/src/
 │       └── ic_otso_light.png             — PRODUCTION logo (Light)
 │
 ├── debug/                                 ← EXPERIMENT (Kontio)
-│   ├── java/com/otso/app/BrandAssets.kt  — Returns ic_kontio_* + ExconVariable font
+│   ├── java/com/otso/app/BrandAssets.kt  — Returns ic_kontio_* + Excon Light/Regular fonts
 │   └── res/
 │       ├── drawable/                     
-│       │   ├── ic_kontio_dark.png        — EXPERIMENT logo (Dark)
-│       │   └── ic_kontio_light.png       — EXPERIMENT logo (Light)
+│       │   ├── ic_kontio_dark.png        — EXPERIMENT logo (Dark mode)
+│       │   └── ic_kontio_light.png       — EXPERIMENT logo (Light mode)
 │       ├── font/
-│       │   └── excon_variable.ttf        — Variable font (wght axis)
-│       ├── mipmap-*/ic_launcher_foreground.png  — Kontio launcher icon (all densities)
+│       │   ├── excon_light.otf           — Excon Light (lightest allowed weight)
+│       │   └── excon_regular.otf         — Excon Regular (heaviest allowed weight)
+│       ├── mipmap-*/ic_launcher_foreground.png  — Kontio launcher icon (58% safe ratio)
 │       └── values/
 │           ├── colors.xml                — accent_primary + ic_launcher_background: #826245
-│           └── strings.xml              — app_name: Kontio
+│           ├── strings.xml               — app_name: Kontio
+│           └── themes.xml                — splash: ic_kontio_dark on #826245 background
 │
 └── release/                               ← PRODUCTION (Otso)
     └── java/com/otso/app/BrandAssets.kt  — Returns ic_otso_*
