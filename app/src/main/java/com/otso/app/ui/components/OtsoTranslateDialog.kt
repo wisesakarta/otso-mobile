@@ -14,11 +14,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,6 +38,7 @@ import com.otso.app.ui.theme.OtsoTypography
 import com.otso.app.ui.theme.otsoColors
 import com.otso.app.ui.theme.otsoClickable
 import com.otso.app.ui.theme.StaggeredItem
+import com.otso.app.BuildConfig
 import com.otso.app.ui.theme.technicalGrain
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -272,11 +275,31 @@ private fun LanguageSelector(
                     .padding(horizontal = 12.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
-                Text(
-                    text = selected.label,
-                    style = OtsoTypography.uiLabelMedium,
-                    color = colors.ink,
-                )
+                if (com.otso.app.BuildConfig.DEBUG) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = selected.label,
+                            style = OtsoTypography.uiLabelMedium,
+                            color = colors.ink,
+                        )
+                        Icon(
+                            imageVector = OtsoIcons.CaretDown,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = colors.muted.copy(alpha = 0.6f)
+                        )
+                    }
+                } else {
+                    Text(
+                        text = selected.label,
+                        style = OtsoTypography.uiLabelMedium,
+                        color = colors.ink,
+                    )
+                }
             }
 
             DropdownMenu(

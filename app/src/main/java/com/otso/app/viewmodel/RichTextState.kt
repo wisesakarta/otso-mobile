@@ -14,12 +14,30 @@ import com.otso.app.model.ContentBlock
 import com.otso.app.model.SpanStyleType
 import com.otso.app.model.TextSpan
 import java.util.Locale
+import com.otso.app.BuildConfig
 
 data class EditorSnapshot(
     val blocks: List<ContentBlock>,
     val selection: TextRange,
     val activeBlockId: String
 )
+
+/**
+ * Represents a selection that spans multiple blocks.
+ * [anchorBlockId] is where the selection started, [focusBlockId] is where it ends.
+ * [anchorOffset] and [focusOffset] are character positions within their respective blocks.
+ */
+data class MultiBlockSelection(
+    val anchorBlockId: String,
+    val anchorOffset: Int,
+    val focusBlockId: String,
+    val focusOffset: Int,
+) {
+    companion object {
+        val None = MultiBlockSelection("", 0, "", 0)
+    }
+    val isActive: Boolean get() = anchorBlockId.isNotEmpty() && focusBlockId.isNotEmpty()
+}
 
 /**
  * Compose-observable state holder for a document represented as ordered blocks.
@@ -35,6 +53,13 @@ class RichTextState(initialBlock: ContentBlock) {
     val blocks = mutableStateListOf<ContentBlock>()
 
     var activeBlockId by mutableStateOf(initialBlock.blockId)
+        private set
+
+    /**
+     * Tracks a selection that spans across multiple blocks.
+     * When active, all blocks between anchor and focus (inclusive) are considered selected.
+     */
+    var multiBlockSelection by mutableStateOf(MultiBlockSelection.None)
         private set
 
     private val undoStack = kotlin.collections.ArrayDeque<EditorSnapshot>()
@@ -126,6 +151,158 @@ class RichTextState(initialBlock: ContentBlock) {
         selection = TextRange(cursor)
     }
 
+    /**
+     * Initiates or extends a multi-block selection.
+     * Called when the user's selection reaches the boundary of a block (start or end).
+     *
+     * @param fromBlockId The block where the selection boundary was hit.
+     * @param direction -1 for extending upward (previous block), +1 for extending downward (next block).
+     */
+    fun extendSelectionToAdjacentBlock(fromBlockId: String, direction: Int) {
+        val fromIndex = blocks.indexOfFirst { it.blockId == fromBlockId }
+        if (fromIndex < 0) return
+        val targetIndex = fromIndex + direction
+        if (targetIndex < 0 || targetIndex >= blocks.size) return
+
+        val targetBlock = blocks[targetIndex]
+
+        if (!multiBlockSelection.isActive) {
+            // Start a new multi-block selection
+            val fromBlock = blocks[fromIndex]
+            val anchorOffset: Int
+            val focusOffset: Int
+            if (direction < 0) {
+                // Extending upward: anchor is at end of current block, focus at start of previous
+                anchorOffset = fromBlock.rawText.length
+                focusOffset = 0
+            } else {
+                // Extending downward: anchor is at start of current block, focus at end of next
+                anchorOffset = 0
+                focusOffset = targetBlock.rawText.length
+            }
+            multiBlockSelection = MultiBlockSelection(
+                anchorBlockId = fromBlockId,
+                anchorOffset = anchorOffset,
+                focusBlockId = targetBlock.blockId,
+                focusOffset = focusOffset,
+            )
+            if (BuildConfig.DEBUG) android.util.Log.i("OtsoState", "extendSelection NEW: from=$fromBlockId(dir=$direction) → anchor=$fromBlockId offset=$anchorOffset, focus=${targetBlock.blockId} offset=$focusOffset")
+        } else {
+            // Extend existing multi-block selection
+            val focusOffset = if (direction < 0) 0 else targetBlock.rawText.length
+            multiBlockSelection = multiBlockSelection.copy(
+                focusBlockId = targetBlock.blockId,
+                focusOffset = focusOffset,
+            )
+            if (BuildConfig.DEBUG) android.util.Log.i("OtsoState", "extendSelection EXTEND: focus → ${targetBlock.blockId} offset=$focusOffset")
+        }
+        // Do NOT change activeBlockId here: moving focus to the target block causes the IME
+        // to attach to a new InputConnection, which resets the selection to collapsed [0,0],
+        // then clearMultiBlockSelection() fires immediately, erasing the selection we just set.
+        // The multi-block overlay is driven by multiBlockSelection state alone — no focus move needed.
+    }
+
+    /**
+     * Clears the multi-block selection state.
+     * Called when the user taps or makes a new single-block selection.
+     */
+    fun clearMultiBlockSelection() {
+        if (multiBlockSelection.isActive) {
+            if (BuildConfig.DEBUG) android.util.Log.i("OtsoState", "clearMultiBlockSelection: was anchor=${multiBlockSelection.anchorBlockId}, focus=${multiBlockSelection.focusBlockId}")
+            multiBlockSelection = MultiBlockSelection.None
+        }
+    }
+
+    fun selectAll() {
+        if (blocks.isEmpty()) return
+        val first = blocks.first()
+        val last = blocks.last()
+        if (blocks.size == 1) {
+            selection = TextRange(0, first.rawText.length)
+            if (BuildConfig.DEBUG) android.util.Log.i("OtsoState", "selectAll: single block, selection=${selection}")
+            return
+        }
+        multiBlockSelection = MultiBlockSelection(
+            anchorBlockId = first.blockId,
+            anchorOffset = 0,
+            focusBlockId = last.blockId,
+            focusOffset = last.rawText.length,
+        )
+        // selection represents the range within the ACTIVE block
+        val activeBlock = blocks.firstOrNull { it.blockId == activeBlockId } ?: first
+        selection = TextRange(0, activeBlock.rawText.length)
+        if (BuildConfig.DEBUG) android.util.Log.i("OtsoState", "selectAll: ${blocks.size} blocks, multiBlock anchor=${first.blockId} focus=${last.blockId}, activeBlock selection=${selection}")
+    }
+
+    /**
+     * Returns whether a given block is fully or partially within the current multi-block selection.
+     * Returns a Pair of (startOffset, endOffset) for the selected range within this block,
+     * or null if the block is not part of the selection.
+     */
+    fun getMultiBlockSelectionRange(blockId: String): Pair<Int, Int>? {
+        if (!multiBlockSelection.isActive) return null
+
+        val anchorIndex = blocks.indexOfFirst { it.blockId == multiBlockSelection.anchorBlockId }
+        val focusIndex = blocks.indexOfFirst { it.blockId == multiBlockSelection.focusBlockId }
+        val blockIndex = blocks.indexOfFirst { it.blockId == blockId }
+        if (anchorIndex < 0 || focusIndex < 0 || blockIndex < 0) return null
+
+        val startIndex = minOf(anchorIndex, focusIndex)
+        val endIndex = maxOf(anchorIndex, focusIndex)
+
+        if (blockIndex < startIndex || blockIndex > endIndex) return null
+
+        val block = blocks[blockIndex]
+        val isAnchorFirst = anchorIndex <= focusIndex
+
+        return when {
+            blockIndex == startIndex && blockIndex == endIndex -> {
+                // Single block in range (shouldn't happen for multi-block, but handle gracefully)
+                val s = if (isAnchorFirst) multiBlockSelection.anchorOffset else multiBlockSelection.focusOffset
+                val e = if (isAnchorFirst) multiBlockSelection.focusOffset else multiBlockSelection.anchorOffset
+                minOf(s, e) to maxOf(s, e)
+            }
+            blockIndex == startIndex -> {
+                // First block in range
+                val offset = if (isAnchorFirst) multiBlockSelection.anchorOffset else multiBlockSelection.focusOffset
+                offset to block.rawText.length
+            }
+            blockIndex == endIndex -> {
+                // Last block in range
+                val offset = if (isAnchorFirst) multiBlockSelection.focusOffset else multiBlockSelection.anchorOffset
+                0 to offset
+            }
+            else -> {
+                // Middle block — fully selected
+                0 to block.rawText.length
+            }
+        }
+    }
+
+    /**
+     * Returns the full selected text across multiple blocks, joined by newlines.
+     */
+    fun getMultiBlockSelectedText(): String {
+        if (!multiBlockSelection.isActive) return ""
+
+        val anchorIndex = blocks.indexOfFirst { it.blockId == multiBlockSelection.anchorBlockId }
+        val focusIndex = blocks.indexOfFirst { it.blockId == multiBlockSelection.focusBlockId }
+        if (anchorIndex < 0 || focusIndex < 0) return ""
+
+        val startIndex = minOf(anchorIndex, focusIndex)
+        val endIndex = maxOf(anchorIndex, focusIndex)
+        val isAnchorFirst = anchorIndex <= focusIndex
+
+        return buildString {
+            for (i in startIndex..endIndex) {
+                val block = blocks[i]
+                val range = getMultiBlockSelectionRange(block.blockId) ?: continue
+                if (isNotEmpty()) append('\n')
+                append(block.rawText.substring(range.first.coerceIn(0, block.rawText.length), range.second.coerceIn(0, block.rawText.length)))
+            }
+        }
+    }
+
     fun getSelectionForBlock(blockId: String): TextRange {
         val index = blocks.indexOfFirst { it.blockId == blockId }
         if (index < 0) return TextRange.Zero
@@ -136,7 +313,7 @@ class RichTextState(initialBlock: ContentBlock) {
                 end = selection.end.coerceIn(0, length),
             )
         } else {
-            TextRange.Zero
+            TextRange(length)
         }
     }
 
@@ -153,10 +330,7 @@ class RichTextState(initialBlock: ContentBlock) {
             saveSnapshot(isTyping = true)
         }
         activeBlockId = blockId
-        selection = TextRange(
-            start = newTfv.selection.start.coerceIn(0, newTfv.text.length),
-            end = newTfv.selection.end.coerceIn(0, newTfv.text.length),
-        )
+        selection = newTfv.selection
 
         if (oldText == newText) return
 
@@ -378,8 +552,10 @@ class RichTextState(initialBlock: ContentBlock) {
 
     /**
      * Resets the state to a fresh [newBlock], typically after external ViewModel edits.
+     * Preserves the current selection if no [newSelection] is explicitly provided.
      */
-    fun reset(newBlock: ContentBlock, newSelection: TextRange = TextRange(newBlock.rawText.length)) {
+    fun reset(newBlock: ContentBlock, newSelection: TextRange? = null) {
+        val targetSelection = newSelection ?: this.selection
         blocks.clear()
         val lines = newBlock.rawText.split("\n")
         if (lines.size == 1) {
@@ -399,20 +575,22 @@ class RichTextState(initialBlock: ContentBlock) {
             }
         }
         // Map flat-text cursor to block-relative cursor
-        val flatCursor = newSelection.end.coerceIn(0, newBlock.rawText.length)
+        val flatCursor = targetSelection.end.coerceIn(0, newBlock.rawText.length)
         var cursorOffset = 0
-        var targetBlock = blocks.last()
-        var relCursor = targetBlock.rawText.length
+        var targetBlockFound = blocks.last()
+        var relCursor = targetBlockFound.rawText.length
+        
         for (b in blocks) {
             val blockEnd = cursorOffset + b.rawText.length
             if (flatCursor <= blockEnd) {
-                targetBlock = b
+                targetBlockFound = b
                 relCursor = (flatCursor - cursorOffset).coerceIn(0, b.rawText.length)
                 break
             }
             cursorOffset += b.rawText.length + 1
         }
-        activeBlockId = targetBlock.blockId
+        
+        activeBlockId = targetBlockFound.blockId
         selection = TextRange(relCursor)
         ensureAtLeastOneBlock()
     }
@@ -465,6 +643,7 @@ class RichTextState(initialBlock: ContentBlock) {
         blocks.add(index + 1, newBlock)
         activeBlockId = newBlock.blockId
         selection = TextRange.Zero
+        if (BuildConfig.DEBUG) android.util.Log.i("OtsoStructural", "Block split: index=$index, newId=${newBlock.blockId}")
     }
 
     /**

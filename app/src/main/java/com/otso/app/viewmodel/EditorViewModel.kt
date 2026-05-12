@@ -186,9 +186,16 @@ class EditorViewModel(
                         isDarkMode = restored.isDarkMode,
                         textFieldValues = restoredValues,
                         themeMode = "system",
-                        font = FontState(editorFontSize = preferredFontSizeSp),
+                        font = FontState(
+                            editorFontSize = preferredFontSizeSp,
+                            activeFoundryFamily = current.font.activeFoundryFamily,
+                            activeFoundryVariantCount = current.font.activeFoundryVariantCount,
+                            isMonospace = current.font.isMonospace,
+                        ),
                         customFontPath = initialFontPath,
                         customFontName = initialFontName,
+                        foundryFolderUri = current.foundryFolderUri,
+                        activeFoundryFamilyName = current.activeFoundryFamilyName,
                         isFontInitialized = current.isFontInitialized || !needsFontScan,
                     )
                 }
@@ -205,9 +212,16 @@ class EditorViewModel(
                         textFieldValues = mapOf(defaultTab.id to TextFieldValue("")),
                         isDarkMode = isSystemDarkMode(),
                         themeMode = "system",
-                        font = FontState(editorFontSize = preferredFontSizeSp),
+                        font = FontState(
+                            editorFontSize = preferredFontSizeSp,
+                            activeFoundryFamily = current.font.activeFoundryFamily,
+                            activeFoundryVariantCount = current.font.activeFoundryVariantCount,
+                            isMonospace = current.font.isMonospace,
+                        ),
                         customFontPath = initialFontPath,
                         customFontName = initialFontName,
+                        foundryFolderUri = current.foundryFolderUri,
+                        activeFoundryFamilyName = current.activeFoundryFamilyName,
                         isFontInitialized = current.isFontInitialized || !needsFontScan,
                     )
                 }

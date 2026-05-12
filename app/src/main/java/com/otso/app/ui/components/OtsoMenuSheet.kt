@@ -35,6 +35,7 @@ import com.otso.app.ui.theme.SquircleShape
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.otso.app.ui.theme.StaggeredItem
+import com.otso.app.ui.theme.OtsoDivider
 import com.otso.app.R
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -83,7 +84,7 @@ fun OtsoMenuSheet(
         StaggeredItem(5) { MenuTextItem("Save As") { onSaveAs(); onDismiss() } }
 
         Spacer(modifier = Modifier.height(8.dp))
-        Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(colors.edge.copy(alpha = 0.08f)))
+        OtsoDivider()
         Spacer(modifier = Modifier.height(8.dp))
 
         // Group 2 — Settings
@@ -141,9 +142,9 @@ fun OtsoMenuSheet(
                             color = colors.ink.copy(alpha = 0.75f),
                         )
                         Icon(
-                            imageVector = OtsoIcons.ArrowCounterClockwise,
+                            imageVector = OtsoIcons.FolderCounterClockwise,
                             contentDescription = "Reset",
-                            modifier = Modifier.size(16.dp).otsoClickable { onResetCustomFont() },
+                            modifier = Modifier.size(18.dp).otsoClickable { onResetCustomFont() },
                             tint = colors.muted
                         )
                         Box(
@@ -169,7 +170,7 @@ fun OtsoMenuSheet(
         }
 
         Spacer(modifier = Modifier.height(8.dp))
-        Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(colors.edge.copy(alpha = 0.08f)))
+        OtsoDivider()
         Spacer(modifier = Modifier.height(8.dp))
 
         // Group 3 — Document Info
@@ -188,7 +189,7 @@ fun OtsoMenuSheet(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(colors.edge.copy(alpha = 0.08f)))
+            OtsoDivider()
             Spacer(modifier = Modifier.height(8.dp))
         }
 

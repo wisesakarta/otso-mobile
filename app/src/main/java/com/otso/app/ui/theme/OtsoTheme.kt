@@ -21,6 +21,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawWithContent
@@ -74,6 +77,15 @@ object OtsoColors {
     val Black            = Color(0xFF000000)
     val Transparent      = Color(0x00000000)
     val DarkShadow       = Color(0xFF000000) // deep midnight-black
+
+    val HighlightPalette = listOf(
+        Color(0xFFF9EB73), // Yellow
+        Color(0xFFFDBA74), // Orange
+        Color(0xFFFCA5A5), // Red
+        Color(0xFFD8B4FE), // Purple
+        Color(0xFF93C5FD), // Blue
+        Color(0xFF86EFAC), // Green
+    )
 }
 
 @androidx.compose.runtime.Immutable
@@ -137,77 +149,77 @@ data class OtsoTypographyTokens(
 
 val OtsoTypography = OtsoTypographyTokens(
     editorBody = TextStyle(
-        fontFamily = GeneralSans,
+        fontFamily = com.otso.app.BrandAssets.defaultFont,
         fontWeight = FontWeight.Normal,
         fontSize   = 15.sp,
-        lineHeight = 22.sp,
-        letterSpacing = (-0.01875).em,
+        lineHeight = 25.5.sp, // 1.7× ratio — generous for readability
+        letterSpacing = (-0.02).em,
         fontFeatureSettings = "tnum",
     ),
     editorLarge = TextStyle(
-        fontFamily = GeneralSans,
+        fontFamily = com.otso.app.BrandAssets.defaultFont,
         fontWeight = FontWeight.Normal,
         fontSize   = 18.sp,
-        lineHeight = 22.sp,
-        letterSpacing = (-0.01).em,
+        lineHeight = 28.sp, // 1.56× ratio
+        letterSpacing = (-0.015).em,
         fontFeatureSettings = "tnum",
     ),
     uiLabel = TextStyle(
-        fontFamily = GeneralSans,
+        fontFamily = com.otso.app.BrandAssets.defaultFont,
         fontWeight = FontWeight.Normal,
         fontSize   = 13.sp,
-        lineHeight = 18.sp, // Cosmos: 1.125rem
-        letterSpacing = (-0.02).em,
+        lineHeight = 18.sp,
+        letterSpacing = (-0.01).em,
     ),
     uiLabelMedium = TextStyle(
-        fontFamily = GeneralSans,
+        fontFamily = com.otso.app.BrandAssets.defaultFont,
         fontWeight = FontWeight.Medium,
         fontSize   = 13.sp,
         lineHeight = 18.sp,
-        letterSpacing = (-0.02).em,
+        letterSpacing = (-0.01).em,
     ),
     uiCaption = TextStyle(
-        fontFamily = GeneralSans,
+        fontFamily = com.otso.app.BrandAssets.defaultFont,
         fontWeight = FontWeight.Normal,
         fontSize   = 11.sp,
-        lineHeight = 14.sp, // Cosmos: 0.875rem
-        letterSpacing = (-0.02).em,
+        lineHeight = 15.sp,
+        letterSpacing = 0.em, // Captions need neutral tracking for legibility
         fontFeatureSettings = "tnum",
     ),
     uiTitle = TextStyle(
-        fontFamily = GeneralSans,
+        fontFamily = com.otso.app.BrandAssets.defaultFont,
         fontWeight = FontWeight.SemiBold,
         fontSize   = 16.sp,
-        lineHeight = 20.sp, // Cosmos: 1.25rem
-        letterSpacing = (-0.02).em,
+        lineHeight = 21.sp,
+        letterSpacing = (-0.025).em,
     ),
     uiTitleLarge = TextStyle(
-        fontFamily = GeneralSans,
+        fontFamily = com.otso.app.BrandAssets.defaultFont,
         fontWeight = FontWeight.SemiBold,
         fontSize   = 22.sp,
-        lineHeight = 26.sp, // Heading-ish
-        letterSpacing = (-0.02).em,
+        lineHeight = 28.sp,
+        letterSpacing = (-0.03).em,
     ),
     uiBodyLarge = TextStyle(
-        fontFamily = GeneralSans,
+        fontFamily = com.otso.app.BrandAssets.defaultFont,
         fontWeight = FontWeight.SemiBold,
         fontSize   = 18.sp,
-        lineHeight = 22.sp,
-        letterSpacing = (-0.01).em,
+        lineHeight = 24.sp,
+        letterSpacing = (-0.015).em,
     ),
     uiDisplayLarge = TextStyle(
-        fontFamily = GeneralSans,
+        fontFamily = com.otso.app.BrandAssets.defaultFont,
         fontWeight = FontWeight.Bold,
         fontSize   = 64.sp,
-        lineHeight = 70.sp, // Cosmos: 1.1 ratio
+        lineHeight = 70.sp,
         letterSpacing = (-0.04).em,
     ),
     uiTechnical = TextStyle(
-        fontFamily = GeneralSans,
+        fontFamily = com.otso.app.BrandAssets.defaultFont,
         fontWeight = FontWeight.Normal,
         fontSize   = 11.sp,
-        lineHeight = 14.sp,
-        letterSpacing = (-0.02).em,
+        lineHeight = 15.sp,
+        letterSpacing = (-0.01).em,
         fontFeatureSettings = "tnum",
     ),
 )
@@ -271,28 +283,63 @@ object OtsoShapes {
     val containerMedium = SquircleShape(OtsoRadius.lg)
     val containerLarge  = SquircleShape(OtsoRadius.xl)
     val pill            = SquircleShape(OtsoRadius.pill)
+    val asterisk        = AsteriskShape(points = 12)
+}
+
+/**
+ * AsteriskShape — Experimental Editorial Geometry.
+ * A 12-point star-like polygon for non-traditional UI containers.
+ */
+class AsteriskShape(private val points: Int = 12) : Shape {
+    override fun createOutline(
+        size: androidx.compose.ui.geometry.Size,
+        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+        density: androidx.compose.ui.unit.Density
+    ): Outline {
+        val path = Path().apply {
+            val center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
+            val outerRadius = size.minDimension / 2
+            val innerRadius = outerRadius * 0.75f // "Bloomy" technical look
+            
+            val angleStep = (Math.PI * 2 / (points * 2)).toFloat()
+            
+            for (i in 0 until (points * 2)) {
+                val angle = i * angleStep - (Math.PI / 2).toFloat() // Start from top
+                val radius = if (i % 2 == 0) outerRadius else innerRadius
+                val x = center.x + radius * kotlin.math.cos(angle.toDouble()).toFloat()
+                val y = center.y + radius * kotlin.math.sin(angle.toDouble()).toFloat()
+                
+                if (i == 0) moveTo(x, y) else lineTo(x, y)
+            }
+            close()
+        }
+        return Outline.Generic(path)
+    }
 }
 
 // Essential Motion Tokens for system components (DO NOT REMOVE)
 object OtsoMotion {
-    const val durationQuickMs = 120
-    const val durationPressMs = 120
-    const val durationStandardMs = 240
-    const val durationSheetMs = 400
-    const val durationStaggerFadeMs = 140
-    const val staggerOffsetPx = 14
-    val easeOut = androidx.compose.animation.core.CubicBezierEasing(0.23f, 1f, 0.32f, 1f)
-    val easeInOut = androidx.compose.animation.core.CubicBezierEasing(0.77f, 0f, 0.175f, 1f)
-    val easeDrawer = androidx.compose.animation.core.CubicBezierEasing(0.4f, 0f, 0.2f, 1f)
+    const val durationQuickMs = 100
+    const val durationPressMs = 100
+    const val durationStandardMs = 220
+    const val durationSheetMs = 380
+    const val durationStaggerFadeMs = 120
+    const val staggerOffsetPx = 10
+    // Expo-out: fast start, gentle deceleration — feels responsive
+    val easeOut = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
+    // Smooth in-out for symmetrical transitions
+    val easeInOut = androidx.compose.animation.core.CubicBezierEasing(0.65f, 0f, 0.35f, 1f)
+    // Drawer/sheet: slightly more resistance at start
+    val easeDrawer = androidx.compose.animation.core.CubicBezierEasing(0.32f, 0.72f, 0f, 1f)
     
     // Physics-based Spring Specs (Red Dot Standard)
     val springSnappy = androidx.compose.animation.core.spring<Float>(
-        dampingRatio = 0.65f,
-        stiffness = 800f
+        dampingRatio = 0.7f,
+        stiffness = 900f
     )
     val springSoft = androidx.compose.animation.core.spring<Float>(
-        dampingRatio = 0.8f,
-        stiffness = 400f
+        dampingRatio = 0.82f,
+        stiffness = 350f
     )
 }
 
@@ -313,16 +360,18 @@ fun OtsoTheme(
     // swap happens while the screen is covered — hiding the one-time mass
     // recomposition of LocalOtsoColors consumers behind the opaque flash.
     var appliedDarkTheme by remember { mutableStateOf(darkTheme) }
+    val context = LocalContext.current
+    val accentPrimary = colorResource(id = R.color.accent_primary)
 
-    val finalOtsoScheme = remember(appliedDarkTheme) {
+    val finalOtsoScheme = remember(appliedDarkTheme, accentPrimary) {
         OtsoColorScheme(
             background = if (appliedDarkTheme) OtsoColors.DarkBackground else OtsoColors.LightBackground,
             ink        = if (appliedDarkTheme) OtsoColors.DarkInk        else OtsoColors.LightInk,
             muted      = if (appliedDarkTheme) OtsoColors.DarkMuted      else OtsoColors.LightMuted,
             edge       = if (appliedDarkTheme) OtsoColors.DarkEdge       else OtsoColors.LightEdge,
             surface    = if (appliedDarkTheme) OtsoColors.DarkSurface    else OtsoColors.LightSurface,
-            accent     = OtsoColors.Accent,
-            accentMuted= OtsoColors.AccentMuted,
+            accent     = accentPrimary,
+            accentMuted= accentPrimary.copy(alpha = 0.18f),
             shadowColor= if (appliedDarkTheme) OtsoColors.DarkShadow     else OtsoColors.LightShadow,
             isDarkMode = appliedDarkTheme,
         )
@@ -417,7 +466,7 @@ fun OtsoTheme(
 @Composable
 fun StaggeredItem(
     index: Int,
-    delayPerRow: Int = 28,
+    delayPerRow: Int = 24,
     content: @Composable () -> Unit
 ) {
     val visible = remember { mutableStateOf(false) }
@@ -437,7 +486,7 @@ fun StaggeredItem(
                 slideInVertically(
                     initialOffsetY = { OtsoMotion.staggerOffsetPx },
                     animationSpec = spring<IntOffset>(
-                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        dampingRatio = 0.75f,
                         stiffness = Spring.StiffnessMediumLow,
                     ),
                 ),
@@ -489,7 +538,7 @@ fun rememberDynamicFontFamily(
 fun Modifier.otsoClickable(
     enabled: Boolean = true,
     interactionSource: MutableInteractionSource? = null,
-    scaleTarget: Float = 0.96f,
+    scaleTarget: Float = 0.97f,
     onClick: () -> Unit
 ): Modifier = composed {
     val internalInteractionSource = interactionSource ?: remember { MutableInteractionSource() }
@@ -504,12 +553,12 @@ fun Modifier.otsoClickable(
 
     LaunchedEffect(isPressed) {
         if (isPressed) {
-            // Press: crisp, fast — no overshoot. Emil: micro-interaction ~100ms.
-            launch { scale.animateTo(scaleTarget, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 600f)) }
-            pressAlpha.animateTo(0.08f, spring(stiffness = Spring.StiffnessMedium))
+            // Press: crisp, immediate — no overshoot. Micro-interaction ~80ms.
+            launch { scale.animateTo(scaleTarget, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 700f)) }
+            pressAlpha.animateTo(0.06f, spring(stiffness = Spring.StiffnessMedium))
         } else {
-            // Release: slight bounce-back — physical, satisfying.
-            launch { scale.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = 500f)) }
+            // Release: subtle bounce-back — physical, satisfying.
+            launch { scale.animateTo(1f, spring(dampingRatio = 0.65f, stiffness = 450f)) }
             pressAlpha.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
         }
     }
@@ -534,6 +583,48 @@ fun Modifier.otsoClickable(
             enabled = enabled,
             onClick = onClick
         )
+}
+
+/**
+ * DNA Utility: Standardized Edge Divider
+ * Provides a consistent hairline separator (0.5dp) using the design system's edge token.
+ */
+fun Modifier.otsoEdgeDivider(
+    alignment: Alignment = Alignment.BottomCenter
+): Modifier = composed {
+    val colors = MaterialTheme.colorScheme.otsoColors
+    val edgeColor = colors.edge.copy(alpha = 0.12f) // Standardized subtle edge
+    
+    drawWithContent {
+        drawContent()
+        val strokeWidth = 0.5.dp.toPx()
+        val y = if (alignment == Alignment.TopCenter) 0f else size.height - strokeWidth
+        
+        drawLine(
+            color = edgeColor,
+            start = Offset(0f, y),
+            end = Offset(size.width, y),
+            strokeWidth = strokeWidth
+        )
+    }
+}
+
+/**
+ * DNA Utility: Standardized Horizontal Divider
+ * A simple Composable for use in Columns and lists.
+ */
+@Composable
+fun OtsoDivider(
+    modifier: Modifier = Modifier,
+    alpha: Float = 0.12f
+) {
+    val colors = MaterialTheme.colorScheme.otsoColors
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(0.5.dp)
+            .background(colors.edge.copy(alpha = alpha))
+    )
 }
 
 /**

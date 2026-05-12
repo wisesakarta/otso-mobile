@@ -49,7 +49,11 @@ object FontManager {
     }
 
     fun scanFolderForFamilies(uri: Uri): List<DetectedFontFamily> {
+        if (appContext == null) {
+            Log.e(TAG, "[SCAN] appContext is NULL — FontManager.bindContext was never called or was GC'd. Throwing.")
+        }
         val context = requireNotNull(appContext) { "FontManager context is not bound." }
+        Log.d(TAG, "[SCAN] scanFolderForFamilies entry: uri=${uri.toString().take(80)}")
         return scanFolderForFamilies(context, uri)
     }
 
@@ -57,8 +61,16 @@ object FontManager {
         context: Context,
         uri: Uri,
     ): List<DetectedFontFamily> {
-        val root = DocumentFile.fromTreeUri(context, uri) ?: return emptyList()
-        if (!root.isDirectory) return emptyList()
+        val root = DocumentFile.fromTreeUri(context, uri)
+        if (root == null) {
+            Log.e(TAG, "[SCAN] DocumentFile.fromTreeUri returned null for uri=$uri")
+            return emptyList()
+        }
+        if (!root.isDirectory) {
+            Log.e(TAG, "[SCAN] URI is not a directory: uri=$uri, isFile=${root.isFile}, name=${root.name}")
+            return emptyList()
+        }
+        Log.d(TAG, "[SCAN] root directory confirmed: name=${root.name}")
 
         val fontFiles = collectFontFiles(root)
         fontFiles.forEach { file ->

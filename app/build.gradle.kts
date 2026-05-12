@@ -21,8 +21,8 @@ android {
         applicationId = "com.otso.app"
         minSdk = 31
         targetSdk = 35
-        versionCode = 5
-        versionName = "2.2.0"
+        versionCode = 6
+        versionName = "2.2.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -64,6 +64,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     splits {
@@ -101,13 +102,16 @@ dependencies {
     implementation(libs.google.material)
     implementation(libs.google.gson)
     implementation(libs.google.mlkit.text.recognition)
+    implementation(libs.google.mlkit.text.recognition.chinese)
+    implementation(libs.google.mlkit.text.recognition.japanese)
+    implementation(libs.google.mlkit.text.recognition.korean)
+    implementation(libs.google.mlkit.text.recognition.devanagari)
     implementation(libs.google.mlkit.language.id)
     implementation(libs.google.mlkit.entity.extraction)
     implementation(libs.google.mlkit.document.scanner)
     implementation(libs.google.mlkit.translate)
     implementation(libs.tensorflow.lite)
     implementation(libs.tensorflow.lite.support)
-    implementation(libs.phosphor.icons)
     implementation(libs.compose.colorpicker)
 
 

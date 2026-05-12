@@ -6,73 +6,616 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.addPathNodes
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
 /**
  * OtsoIcons — The Phosphor Bridge.
- * Using exact Phosphor "Regular" SVG paths mapped to Compose.
+ * Custom implementation using manual paths for maximum stability and visual perfection.
+ * All icons follow Phosphor Icons v2.1.0 geometry.
  */
 object OtsoIcons {
     private const val STROKE_WEIGHT = 16f
 
-    val X: ImageVector get() = buildIcon("X", "M200,56 L56,200 M200,200 L56,56")
-
-    val CaretUp: ImageVector get() = buildIcon("CaretUp", "M48,160 L128,80 L208,160")
-
-    val CaretDown: ImageVector get() = buildIcon("CaretDown", "M208,96 L128,176 L48,96")
-
-    val Camera: ImageVector get() = buildIcon("Camera", "M 128.0 96.0 a 36.0,36.0 0 1,0 0,72.0 a 36.0,36.0 0 1,0 0,-72.0 M208,208H48a16,16,0,0,1-16-16V80A16,16,0,0,1,48,64H80L96,40h64l16,24h32a16,16,0,0,1,16,16V192A16,16,0,0,1,208,208Z")
-
-    val Undo: ImageVector get() = buildIcon("Undo", "M80,136 L32,88 L80,40 M80,200h88a56,56,0,0,0,56-56h0a56,56,0,0,0-56-56H32")
-
-    val Redo: ImageVector get() = buildIcon("Redo", "M176,136 L224,88 L176,40 M176,200H88a56,56,0,0,1-56-56h0A56,56,0,0,1,88,88H224")
-
-    val Check: ImageVector get() = buildIcon("Check", "M40,144 L96,200 L224,72")
-
-    val ArrowCounterClockwise: ImageVector get() = buildIcon("ArrowCounterClockwise", "M24,56 L24,104 L72,104 M67.59,192A88,88,0,1,0,65.77,65.77L24,104")
-
-    val ArrowLeft: ImageVector get() = buildIcon("ArrowLeft", "M216,128 L40,128 M112,56 L40,128 L112,200")
-
-    val Plus: ImageVector get() = buildIcon("Plus", "M40,128 L216,128 M128,40 L128,216")
-
-    val Minus: ImageVector get() = buildIcon("Minus", "M40,128 L216,128")
-
-    val TextB: ImageVector get() = buildIcon("TextB", "M80,120h80a40,40,0,0,1,0,80H80V48h68a36,36,0,0,1,0,72")
-
-    val TextItalic: ImageVector get() = buildIcon("TextItalic", "M152,56 L104,200 M64,200 L144,200 M112,56 L192,56")
-
-    val TextUnderline: ImageVector get() = buildIcon("TextUnderline", "M64,224 L192,224 M184,56v80a56,56,0,0,1-112,0V56")
-
-    val TextStrikethrough: ImageVector get() = buildIcon("TextStrikethrough", "M40,128 L216,128 M76.33,96a25.71,25.71,0,0,1-1.22-8c0-22.09,22-40,52.89-40,23,0,40.24,9.87,48,24 M72,168c0,22.09,25.07,40,56,40s56-17.91,56-40c0-23.77-21.62-33-45.6-40")
-
-    val ListBullets: ImageVector get() = buildIcon("ListBullets", "M88,64 L216,64 M88,128 L216,128 M88,192 L216,192 M 44.0 52.0 a 12.0,12.0 0 1,0 0,24.0 a 12.0,12.0 0 1,0 0,-24.0 M 44.0 116.0 a 12.0,12.0 0 1,0 0,24.0 a 12.0,12.0 0 1,0 0,-24.0 M 44.0 180.0 a 12.0,12.0 0 1,0 0,24.0 a 12.0,12.0 0 1,0 0,-24.0")
-
-    val ListNumbers: ImageVector get() = buildIcon("ListNumbers", "M104,128 L216,128 M104,64 L216,64 M104,192 L216,192 M56,104 L56,40 L40,48 M72,208H40l28.68-38.37a15.69,15.69,0,0,0-3.24-22.41,16.78,16.78,0,0,0-23.06,3.15,15.85,15.85,0,0,0-2.38,4.3")
-
-    val Code: ImageVector get() = buildIcon("Code", "M160,40 L96,216 M64,88 L16,128 L64,168 M192,88 L240,128 L192,168")
-
-    val Link: ImageVector get() = buildIcon("Link", "M141.38,64.68l11-11a46.62,46.62,0,0,1,65.94,0h0a46.62,46.62,0,0,1,0,65.94L193.94,144,183.6,154.34a46.63,46.63,0,0,1-66-.05h0A46.48,46.48,0,0,1,104,120.06 M114.62,191.32l-11,11a46.63,46.63,0,0,1-66-.05h0a46.63,46.63,0,0,1,.06-65.89L72.4,101.66a46.62,46.62,0,0,1,65.94,0h0A46.45,46.45,0,0,1,152,135.94")
-
-    val Highlighter: ImageVector get() = buildIcon("Highlighter", "M88,128 L24,192 L96,216 L136,176 M184,160l-26.34,26.34a8,8,0,0,1-11.32,0L77.66,117.66a8,8,0,0,1,0-11.32L104,80 M248,112l-50.34,50.34a8,8,0,0,1-11.32,0L101.66,77.66a8,8,0,0,1,0-11.32L152,16")
-
-    val PaperPlaneTilt: ImageVector get() = buildIcon("PaperPlaneTilt", "M210.3,35.9L23.9,88.4a8,8,0,0,0-1.2,15l85.6,40.5a7.8,7.8,0,0,1,3.8,3.8l40.5,85.6a8,8,0,0,0,15-1.2L220.1,45.7A7.9,7.9,0,0,0,210.3,35.9ZM115.5,140.5,160,96")
-
-    private fun buildIcon(iconName: String, pathData: String): ImageVector {
-        return ImageVector.Builder(
-            name = "OtsoIcons." + iconName,
-            defaultWidth = 24.dp,
-            defaultHeight = 24.dp,
-            viewportWidth = 256f,
-            viewportHeight = 256f
-        ).addPath(
-            pathData = addPathNodes(pathData),
-            fill = null,
-            stroke = SolidColor(Color.Black),
-            strokeLineWidth = STROKE_WEIGHT,
-            strokeLineCap = StrokeCap.Round,
-            strokeLineJoin = StrokeJoin.Round
-        ).build()
+    val X = buildIcon("X") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(200f, 56f)
+            lineTo(56f, 200f)
+            moveTo(56f, 56f)
+            lineTo(200f, 200f)
+        }
     }
+
+    val CaretUp = buildIcon("CaretUp") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(48f, 160f)
+            lineTo(128f, 80f)
+            lineTo(208f, 160f)
+        }
+    }
+
+    val CaretDown = buildIcon("CaretDown") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(48f, 96f)
+            lineTo(128f, 176f)
+            lineTo(208f, 96f)
+        }
+    }
+
+    val Camera = buildIcon("Camera") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(208f, 208f)
+            horizontalLineTo(48f)
+            arcTo(16f, 16f, 0f, false, true, 32f, 192f)
+            verticalLineTo(80f)
+            arcTo(16f, 16f, 0f, false, true, 48f, 64f)
+            horizontalLineTo(80f)
+            lineTo(96f, 40f)
+            horizontalLineTo(160f)
+            lineTo(176f, 64f)
+            horizontalLineTo(208f)
+            arcTo(16f, 16f, 0f, false, true, 224f, 80f)
+            verticalLineTo(192f)
+            arcTo(16f, 16f, 0f, false, true, 208f, 208f)
+            close()
+            moveTo(128f, 168f)
+            arcTo(36f, 36f, 0f, true, false, 92f, 132f)
+            arcTo(36f, 36f, 0f, false, false, 128f, 168f)
+            close()
+        }
+    }
+
+    val Undo = buildIcon("Undo") {
+        path(fill = SolidColor(Color.Black), stroke = null) {
+            moveTo(224f, 128f)
+            arcTo(96f, 96f, 0f, false, true, 129.29f, 224f)
+            horizontalLineTo(128f)
+            arcTo(95.38f, 95.38f, 0f, false, true, 62.1f, 197.8f)
+            arcTo(8f, 8f, 0f, false, true, 73.1f, 186.17f)
+            arcTo(80f, 80f, 0f, true, false, 71.43f, 71.39f)
+            arcTo(3.07f, 3.07f, 0f, false, true, 71.17f, 71.64f)
+            lineTo(44.59f, 96f)
+            horizontalLineTo(72f)
+            arcTo(8f, 8f, 0f, false, true, 72f, 112f)
+            horizontalLineTo(24f)
+            arcTo(8f, 8f, 0f, false, true, 16f, 104f)
+            verticalLineTo(56f)
+            arcTo(8f, 8f, 0f, false, true, 32f, 56f)
+            verticalLineTo(85.8f)
+            lineTo(60.25f, 60f)
+            arcTo(96f, 96f, 0f, false, true, 224f, 128f)
+            close()
+        }
+    }
+
+    val Redo = buildIcon("Redo") {
+        path(fill = SolidColor(Color.Black), stroke = null) {
+            moveTo(240f, 56f)
+            verticalLineTo(104f)
+            arcTo(8f, 8f, 0f, false, true, 232f, 112f)
+            horizontalLineTo(184f)
+            arcTo(8f, 8f, 0f, false, true, 184f, 96f)
+            horizontalLineTo(211.4f)
+            lineTo(184.81f, 71.64f)
+            lineTo(184.56f, 71.4f)
+            arcTo(80f, 80f, 0f, true, false, 182.89f, 186.18f)
+            arcTo(8f, 8f, 0f, false, true, 193.89f, 197.81f)
+            arcTo(95.44f, 95.44f, 0f, false, true, 128f, 224f)
+            horizontalLineTo(126.68f)
+            arcTo(96f, 96f, 0f, true, true, 195.75f, 60f)
+            lineTo(224f, 85.8f)
+            verticalLineTo(56f)
+            arcTo(8f, 8f, 0f, false, true, 240f, 56f)
+            close()
+        }
+    }
+
+    val Check = buildIcon("Check") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(40f, 128f)
+            lineTo(96f, 184f)
+            lineTo(216f, 64f)
+        }
+    }
+
+    val ArrowCounterClockwise = buildIcon("ArrowCounterClockwise") {
+        path(fill = SolidColor(Color.Black), stroke = null) {
+            moveTo(224f, 128f)
+            arcTo(96f, 96f, 0f, false, true, 129.29f, 224f)
+            horizontalLineTo(128f)
+            arcTo(95.38f, 95.38f, 0f, false, true, 62.1f, 197.8f)
+            arcTo(8f, 8f, 0f, false, true, 73.1f, 186.17f)
+            arcTo(80f, 80f, 0f, true, false, 71.43f, 71.39f)
+            arcTo(3.07f, 3.07f, 0f, false, true, 71.17f, 71.64f)
+            lineTo(44.59f, 96f)
+            horizontalLineTo(72f)
+            arcTo(8f, 8f, 0f, false, true, 72f, 112f)
+            horizontalLineTo(24f)
+            arcTo(8f, 8f, 0f, false, true, 16f, 104f)
+            verticalLineTo(56f)
+            arcTo(8f, 8f, 0f, false, true, 32f, 56f)
+            verticalLineTo(85.8f)
+            lineTo(60.25f, 60f)
+            arcTo(96f, 96f, 0f, false, true, 224f, 128f)
+            close()
+        }
+    }
+
+    val ArrowLeft = buildIcon("ArrowLeft") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(208f, 128f)
+            horizontalLineTo(48f)
+            moveTo(48f, 128f)
+            lineTo(112f, 64f)
+            moveTo(48f, 128f)
+            lineTo(112f, 192f)
+        }
+    }
+
+    val ArrowRight = buildIcon("ArrowRight") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(48f, 128f)
+            horizontalLineTo(208f)
+            moveTo(208f, 128f)
+            lineTo(144f, 64f)
+            moveTo(208f, 128f)
+            lineTo(144f, 192f)
+        }
+    }
+
+    val Plus = buildIcon("Plus") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(40f, 128f)
+            horizontalLineTo(216f)
+            moveTo(128f, 40f)
+            verticalLineTo(216f)
+        }
+    }
+
+    val Minus = buildIcon("Minus") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(40f, 128f)
+            horizontalLineTo(216f)
+        }
+    }
+
+    val TextB = buildIcon("TextB") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(64f, 48f)
+            horizontalLineTo(140f)
+            arcTo(44f, 44f, 0f, false, true, 140f, 136f)
+            horizontalLineTo(64f)
+            verticalLineTo(48f)
+            close()
+            moveTo(64f, 136f)
+            horizontalLineTo(148f)
+            arcTo(44f, 44f, 0f, false, true, 148f, 224f)
+            horizontalLineTo(64f)
+            verticalLineTo(136f)
+            close()
+        }
+    }
+
+    val TextItalic = buildIcon("TextItalic") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(152f, 56f)
+            lineTo(104f, 200f)
+            moveTo(64f, 200f)
+            horizontalLineTo(144f)
+            moveTo(112f, 56f)
+            horizontalLineTo(192f)
+        }
+    }
+
+    val TextUnderline = buildIcon("TextUnderline") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(64f, 48f)
+            verticalLineTo(128f)
+            arcTo(64f, 64f, 0f, false, false, 192f, 128f)
+            verticalLineTo(48f)
+            moveTo(40f, 216f)
+            horizontalLineTo(216f)
+        }
+    }
+
+    val TextStrikethrough = buildIcon("TextStrikethrough") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(40f, 128f)
+            horizontalLineTo(216f)
+            moveTo(76.33f, 96f)
+            arcTo(25.71f, 25.71f, 0f, false, true, 75.11f, 88f)
+            arcTo(52.89f, 52.89f, 0f, false, true, 128f, 48f)
+            arcTo(48f, 48f, 0f, false, true, 176f, 72f)
+            moveTo(72f, 168f)
+            arcTo(56f, 56f, 0f, false, false, 128f, 208f)
+            arcTo(56f, 56f, 0f, false, false, 184f, 168f)
+            arcTo(45.6f, 45.6f, 0f, false, false, 138.4f, 128f)
+        }
+    }
+
+    val ListBullets = buildIcon("ListBullets") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(88f, 64f)
+            horizontalLineTo(216f)
+            moveTo(88f, 128f)
+            horizontalLineTo(216f)
+            moveTo(88f, 192f)
+            horizontalLineTo(216f)
+            moveTo(40f, 64f)
+            horizontalLineTo(40.1f)
+            moveTo(40f, 128f)
+            horizontalLineTo(40.1f)
+            moveTo(40f, 192f)
+            horizontalLineTo(40.1f)
+        }
+    }
+
+    val ListNumbers = buildIcon("ListNumbers") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(104f, 64f)
+            horizontalLineTo(216f)
+            moveTo(104f, 128f)
+            horizontalLineTo(216f)
+            moveTo(104f, 192f)
+            horizontalLineTo(216f)
+            moveTo(40f, 60f)
+            lineTo(56f, 48f)
+            verticalLineTo(80f)
+        }
+    }
+
+    val Code = buildIcon("Code") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(64f, 88f)
+            lineTo(16f, 128f)
+            lineTo(64f, 168f)
+            moveTo(192f, 88f)
+            lineTo(240f, 128f)
+            lineTo(192f, 168f)
+            moveTo(160f, 40f)
+            lineTo(96f, 216f)
+        }
+    }
+
+    val Link = buildIcon("Link") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(96f, 160f)
+            lineTo(160f, 96f)
+            moveTo(112f, 76.11f)
+            lineTo(142.06f, 46.11f)
+            arcTo(48f, 48f, 0f, false, true, 209.94f, 113.99f)
+            lineTo(179.88f, 144f)
+            moveTo(76.11f, 112f)
+            lineTo(46.11f, 142.06f)
+            arcTo(48f, 48f, 0f, false, false, 113.99f, 209.94f)
+            lineTo(144f, 179.88f)
+        }
+    }
+
+    val Highlighter = buildIcon("Highlighter") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            // Phosphor Highlighter (Regular) — pen body with angled tip
+            moveTo(92.69f, 216f)
+            horizontalLineTo(163.31f)
+            moveTo(128f, 216f)
+            verticalLineTo(176f)
+            moveTo(164f, 80f)
+            lineTo(192f, 108f)
+            lineTo(136f, 176f)
+            horizontalLineTo(120f)
+            lineTo(80f, 148f)
+            verticalLineTo(132f)
+            close()
+            moveTo(164f, 80f)
+            lineTo(180f, 52f)
+            arcTo(8f, 8f, 0f, false, true, 192f, 52f)
+            lineTo(204f, 64f)
+            arcTo(8f, 8f, 0f, false, true, 204f, 76f)
+            lineTo(192f, 108f)
+        }
+    }
+
+    val PaperPlaneTilt = buildIcon("PaperPlaneTilt") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(210.3f, 35.9f)
+            lineTo(23.9f, 88.4f)
+            arcTo(8f, 8f, 0f, false, false, 26.1f, 103.9f)
+            lineTo(96f, 128f)
+            lineTo(168f, 56f)
+            lineTo(128f, 160f)
+            lineTo(152.1f, 229.9f)
+            arcTo(8f, 8f, 0f, false, false, 167.6f, 232.1f)
+            lineTo(220.1f, 45.7f)
+            arcTo(8.1f, 8.1f, 0f, false, false, 210.3f, 35.9f)
+            close()
+        }
+    }
+
+    val LetterM = buildIcon("LetterM") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            // Clean monospace "M" letterform without enclosing circle — better legibility at 20dp
+            moveTo(72f, 192f)
+            verticalLineTo(64f)
+            lineTo(128f, 144f)
+            lineTo(184f, 64f)
+            verticalLineTo(192f)
+        }
+    }
+
+    val TabKey = buildIcon("TabKey") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(48f, 128f)
+            horizontalLineTo(208f)
+            moveTo(208f, 128f)
+            lineTo(144f, 64f)
+            moveTo(208f, 128f)
+            lineTo(144f, 192f)
+            moveTo(208f, 48f)
+            verticalLineTo(208f)
+        }
+    }
+
+    val Tabs = buildIcon("Tabs") {
+        path(fill = SolidColor(Color.Black), stroke = null) {
+            moveTo(224f, 128f)
+            arcTo(8f, 8f, 0f, false, true, 216f, 136f)
+            horizontalLineTo(112f)
+            arcTo(8f, 8f, 0f, false, true, 112f, 120f)
+            horizontalLineTo(216f)
+            arcTo(8f, 8f, 0f, false, true, 224f, 128f)
+            close()
+            moveTo(112f, 72f)
+            horizontalLineTo(216f)
+            arcTo(8f, 8f, 0f, false, false, 216f, 56f)
+            horizontalLineTo(112f)
+            arcTo(8f, 8f, 0f, false, false, 112f, 72f)
+            close()
+            moveTo(216f, 184f)
+            horizontalLineTo(40f)
+            arcTo(8f, 8f, 0f, false, false, 40f, 200f)
+            horizontalLineTo(216f)
+            arcTo(8f, 8f, 0f, false, false, 216f, 184f)
+            close()
+            moveTo(34.34f, 141.66f)
+            arcTo(8f, 8f, 0f, false, false, 45.66f, 141.66f)
+            lineTo(85.66f, 101.66f)
+            arcTo(8f, 8f, 0f, false, false, 85.66f, 90.34f)
+            lineTo(45.66f, 50.34f)
+            arcTo(8f, 8f, 0f, false, false, 34.34f, 61.66f)
+            lineTo(68.69f, 96f)
+            lineTo(34.34f, 130.34f)
+            arcTo(8f, 8f, 0f, false, false, 34.34f, 141.66f)
+            close()
+        }
+    }
+
+    val Parentheses = buildIcon("Parentheses") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(88f, 48f)
+            arcTo(128f, 128f, 0f, false, false, 88f, 208f)
+            moveTo(168f, 48f)
+            arcTo(128f, 128f, 0f, false, true, 168f, 208f)
+        }
+    }
+
+    val Brackets = buildIcon("Brackets") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(80f, 48f)
+            horizontalLineTo(48f)
+            verticalLineTo(208f)
+            horizontalLineTo(80f)
+            moveTo(176f, 48f)
+            horizontalLineTo(208f)
+            verticalLineTo(208f)
+            horizontalLineTo(176f)
+        }
+    }
+
+    val Slash = buildIcon("Slash") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(200f, 40f)
+            lineTo(56f, 216f)
+        }
+    }
+
+    val Quotes = buildIcon("Quotes") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(108f, 144f)
+            horizontalLineTo(40f)
+            arcTo(8f, 8f, 0f, false, true, 32f, 136f)
+            verticalLineTo(72f)
+            arcTo(8f, 8f, 0f, false, true, 40f, 64f)
+            horizontalLineTo(100f)
+            arcTo(8f, 8f, 0f, false, true, 108f, 72f)
+            verticalLineTo(160f)
+            arcTo(40f, 40f, 0f, false, true, 68f, 200f)
+            
+            moveTo(224f, 144f)
+            horizontalLineTo(156f)
+            arcTo(8f, 8f, 0f, false, true, 148f, 136f)
+            verticalLineTo(72f)
+            arcTo(8f, 8f, 0f, false, true, 156f, 64f)
+            horizontalLineTo(216f)
+            arcTo(8f, 8f, 0f, false, true, 224f, 72f)
+            verticalLineTo(160f)
+            arcTo(40f, 40f, 0f, false, true, 184f, 200f)
+        }
+    }
+
+    val Circle = buildIcon("Circle") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(128f, 32f)
+            arcTo(96f, 96f, 0f, true, true, 128f, 224f)
+            arcTo(96f, 96f, 0f, true, true, 128f, 32f)
+            close()
+        }
+    }
+
+    val ArrowClockwise = buildIcon("ArrowClockwise") {
+        path(fill = SolidColor(Color.Black), stroke = null) {
+            moveTo(232f, 128f)
+            arcTo(104f, 104f, 0f, false, true, 48.81f, 195.19f)
+            arcTo(8f, 8f, 0f, false, true, 60.12f, 183.88f)
+            arcTo(88f, 88f, 0f, true, false, 88f, 40f)
+            arcTo(87.56f, 87.56f, 0f, false, false, 56f, 53.76f)
+            verticalLineTo(40f)
+            arcTo(8f, 8f, 0f, false, true, 72f, 40f)
+            verticalLineTo(88f)
+            arcTo(8f, 8f, 0f, false, true, 64f, 96f)
+            horizontalLineTo(16f)
+            arcTo(8f, 8f, 0f, false, true, 16f, 80f)
+            horizontalLineTo(44.2f)
+            arcTo(104f, 104f, 0f, false, true, 232f, 128f)
+            close()
+        }
+    }
+
+    val Folder = buildIcon("Folder") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(216.89f, 208f)
+            horizontalLineTo(39.38f)
+            arcTo(7.4f, 7.4f, 0f, false, true, 32f, 200.62f)
+            verticalLineTo(80f)
+            horizontalLineTo(216f)
+            arcTo(8f, 8f, 0f, false, true, 224f, 88f)
+            verticalLineTo(200.89f)
+            arcTo(7.11f, 7.11f, 0f, false, true, 216.89f, 208f)
+            close()
+            moveTo(32f, 80f)
+            verticalLineTo(56f)
+            arcTo(8f, 8f, 0f, false, true, 40f, 48f)
+            horizontalLineTo(92.69f)
+            arcTo(8f, 8f, 0f, false, true, 98.34f, 50.34f)
+            lineTo(128f, 80f)
+        }
+    }
+
+    val FolderCounterClockwise = buildIcon("FolderCounterClockwise") {
+        // Folder body (identical to Folder icon)
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(216.89f, 208f)
+            horizontalLineTo(39.38f)
+            arcTo(7.4f, 7.4f, 0f, false, true, 32f, 200.62f)
+            verticalLineTo(80f)
+            horizontalLineTo(216f)
+            arcTo(8f, 8f, 0f, false, true, 224f, 88f)
+            verticalLineTo(200.89f)
+            arcTo(7.11f, 7.11f, 0f, false, true, 216.89f, 208f)
+            close()
+            moveTo(32f, 80f)
+            verticalLineTo(56f)
+            arcTo(8f, 8f, 0f, false, true, 40f, 48f)
+            horizontalLineTo(92.69f)
+            arcTo(8f, 8f, 0f, false, true, 98.34f, 50.34f)
+            lineTo(128f, 80f)
+        }
+        // CCW circular arrow — center (184,164) r=28, 270° CCW arc east→south, arrowhead at south pointing east
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(212f, 164f)
+            arcTo(28f, 28f, 0f, true, false, 184f, 192f)
+            lineTo(176f, 184f)
+            moveTo(184f, 192f)
+            lineTo(176f, 200f)
+        }
+    }
+
+    val Asterisk = buildIcon("Asterisk") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(128f, 40f)
+            verticalLineTo(216f)
+            moveTo(51.79f, 84f)
+            lineTo(204.21f, 172f)
+            moveTo(51.79f, 172f)
+            lineTo(204.21f, 84f)
+        }
+    }
+
+    val Brain = buildIcon("Brain") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            // Simplified brain silhouette — two hemispheres with central divide
+            moveTo(128f, 40f)
+            verticalLineTo(216f)
+            moveTo(128f, 56f)
+            curveTo(100f, 56f, 72f, 72f, 72f, 104f)
+            curveTo(72f, 128f, 88f, 140f, 88f, 160f)
+            curveTo(88f, 180f, 104f, 200f, 128f, 200f)
+            moveTo(128f, 56f)
+            curveTo(156f, 56f, 184f, 72f, 184f, 104f)
+            curveTo(184f, 128f, 168f, 140f, 168f, 160f)
+            curveTo(168f, 180f, 152f, 200f, 128f, 200f)
+            // Sulci (brain folds)
+            moveTo(88f, 104f)
+            curveTo(104f, 104f, 112f, 120f, 128f, 120f)
+            moveTo(168f, 104f)
+            curveTo(152f, 104f, 144f, 120f, 128f, 120f)
+        }
+    }
+
+    val WarningCircle = buildIcon("WarningCircle") {
+        path(fill = SolidColor(Color.Black), stroke = null) {
+            moveTo(128f, 24f)
+            arcTo(104f, 104f, 0f, true, true, 24f, 128f)
+            arcTo(104f, 104f, 0f, false, true, 128f, 24f)
+            close()
+            moveTo(128f, 80f)
+            arcTo(8f, 8f, 0f, false, false, 120f, 88f)
+            verticalLineTo(136f)
+            arcTo(8f, 8f, 0f, false, false, 136f, 136f)
+            verticalLineTo(88f)
+            arcTo(8f, 8f, 0f, false, false, 128f, 80f)
+            close()
+            moveTo(128f, 160f)
+            arcTo(12f, 12f, 0f, true, false, 140f, 172f)
+            arcTo(12f, 12f, 0f, false, false, 128f, 160f)
+            close()
+        }
+    }
+
+    val Info = buildIcon("Info") {
+        path(fill = SolidColor(Color.Black), stroke = null) {
+            moveTo(128f, 24f)
+            arcTo(104f, 104f, 0f, true, true, 24f, 128f)
+            arcTo(104f, 104f, 0f, false, true, 128f, 24f)
+            close()
+            moveTo(128f, 112f)
+            arcTo(8f, 8f, 0f, false, false, 120f, 120f)
+            verticalLineTo(160f)
+            arcTo(8f, 8f, 0f, false, false, 136f, 160f)
+            verticalLineTo(120f)
+            arcTo(8f, 8f, 0f, false, false, 128f, 112f)
+            close()
+            moveTo(128f, 80f)
+            arcTo(12f, 12f, 0f, true, false, 140f, 92f)
+            arcTo(12f, 12f, 0f, false, false, 128f, 112f)
+            close()
+        }
+    }
+
+    // Two horizontal selection bars — represents "select all text"
+    val SelectAll = buildIcon("SelectAll") {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(48f, 96f)
+            horizontalLineTo(208f)
+            moveTo(48f, 128f)
+            horizontalLineTo(208f)
+            moveTo(48f, 160f)
+            horizontalLineTo(208f)
+            moveTo(32f, 72f)
+            verticalLineTo(184f)
+            moveTo(224f, 72f)
+            verticalLineTo(184f)
+        }
+    }
+
+    private fun buildIcon(
+        name: String,
+        block: ImageVector.Builder.() -> ImageVector.Builder
+    ): ImageVector = ImageVector.Builder(
+        name = name,
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 256f,
+        viewportHeight = 256f
+    ).block().build()
 }
 

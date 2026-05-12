@@ -1,8 +1,10 @@
-# PRD: Otso Vision v2 — Neural OCR Engine
+# PRD: Otso Vision v2 — Model-First OCR Enhancement Engine
 
 ## Pengantar
 
-Otso Vision v2 adalah evolusi major dari pipeline OCR Otso Note, dari sebuah wrapper ML Kit menjadi **engine pengenalan teks milik sendiri** dengan brand credential "Otso". Cakupan meliputi: peningkatan akurasi untuk printed text, receipt/nota Indonesia, dukungan tulisan tangan, dan pengenalan multi-script (CJK, Arabic, Devanagari). Ini mencakup training custom TFLite model untuk image binarization/preprocessing dan generalisasi semantic cleanup menjadi arsitektur yang dapat diperluas tanpa rebuild.
+Otso Vision v2 adalah evolusi major dari pipeline OCR Otso Note, dari wrapper ML Kit pasif menjadi **model-first OCR enhancement engine** dengan signature Otso. V2 tidak mengganti recognizer ML Kit sebagai backend pengenalan teks; V2 membangun intelligence layer milik Otso di sekitar recognition: model preprocessing on-device, routing engine, candidate ranking, layout reconstruction, semantic cleanup, dan degraded-mode observability.
+
+Artifact model utama V2 adalah `otso_docclean_v1.tflite`, yaitu custom TFLite document-cleanup/binarization model untuk meningkatkan kualitas gambar sebelum OCR. Cakupan V2 meliputi peningkatan akurasi untuk printed text, receipt/nota Indonesia, dukungan awal handwriting melalui preprocessing khusus, dan pengenalan multi-script yang tetap menggunakan ML Kit recognizer.
 
 Target rilis: **v3.0.0** (Major Release)
 
@@ -10,36 +12,36 @@ Target rilis: **v3.0.0** (Major Release)
 
 ## Tujuan
 
-- Melatih dan mengintegrasikan custom TFLite model preprocessing milik Otso (`otso_vision_v2.tflite`)
+- Melatih dan mengintegrasikan custom TFLite document-cleanup model milik Otso (`otso_docclean_v1.tflite`)
 - Meningkatkan akurasi OCR untuk dokumen cetak, nota belanja Indonesia, dan tulisan tangan
-- Menambahkan dukungan pengenalan multi-script (Latin + CJK + Devanagari)
+- Menambahkan dukungan pengenalan multi-script via ML Kit backend (Latin + CJK + Devanagari)
 - Mengganti hardcoded semantic cleanup dengan sistem rule berbasis konfigurasi eksternal
 - Tidak ada perubahan UI — seluruh improvement terjadi di belakang layar (engine-only)
-- Mempertahankan kompatibilitas penuh dengan pipeline hybrid yang sudah ada
+- Menjadikan Otso model sebagai primary preprocessing path, dengan heuristic lama hanya sebagai degraded mode yang observable
 
 ---
 
 ## User Stories
 
 ### US-001: Dataset Collection Pipeline
-**Deskripsi:** Sebagai engineer, saya perlu mengumpulkan dan menyusun dataset training agar model Otso Vision dapat dilatih dengan data yang representatif.
+**Deskripsi:** Sebagai engineer, saya perlu mengumpulkan dan menyusun dataset training agar model Otso Vision dapat dilatih dengan data yang representatif. (Status: SELESAI di Home Server)
 
 **Kriteria Penerimaan:**
-- [ ] Membuat direktori `training/` di root repository (di-gitignore) dengan struktur: `training/images/`, `training/labels/`, `training/scripts/`
-- [ ] Membuat script Python (`training/scripts/prepare_dataset.py`) untuk mengonversi pasangan gambar-teks menjadi format yang kompatibel dengan TFLite Model Maker atau TensorFlow
-- [ ] Mendokumentasikan kategori dataset minimum: (a) dokumen cetak Latin, (b) nota/receipt Indonesia, (c) tulisan tangan, (d) dokumen CJK
-- [ ] Minimum 200 pasangan gambar-teks per kategori untuk training awal
-- [ ] Dataset harus mencakup variasi: pencahayaan buruk, rotasi, blur, low-DPI
-- [ ] Typecheck/lint lolos
+- [x] Membuat direktori `training/` di root repository (di-gitignore) dengan struktur: `training/images/`, `training/labels/`, `training/scripts/`
+- [x] Membuat script Python (`training/scripts/prepare_dataset.py` dkk) untuk mengonversi pasangan gambar-teks menjadi format yang kompatibel
+- [x] Mendokumentasikan kategori dataset minimum: (a) dokumen cetak Latin (SROIE), (b) nota/receipt Indonesia (CORD), (c) tulisan tangan (IAM), (d) dokumen sulit (DIBCO)
+- [x] Minimum 200 pasangan gambar-teks per kategori untuk training awal (Realita: 12,482 total data terkumpul)
+- [x] Dataset harus mencakup variasi: pencahayaan buruk, rotasi, blur, low-DPI
+- [x] Typecheck/lint lolos
 
 ### US-002: Custom Model Training Pipeline
 **Deskripsi:** Sebagai engineer, saya perlu membangun pipeline training yang reproducible agar model Otso Vision dapat dilatih ulang kapan saja dengan dataset yang diperbarui.
 
 **Kriteria Penerimaan:**
 - [ ] Membuat script Python (`training/scripts/train_binarization.py`) yang melatih model binarization/preprocessing menggunakan TensorFlow
-- [ ] Model arsitektur: lightweight U-Net atau MobileNet-based segmentation untuk document binarization
+- [x] Model arsitektur: MobileNetV3-Small segmentation untuk document binarization/doc-cleanup (Colab prototype)
 - [ ] Model harus mampu: (a) adaptive thresholding yang lebih baik dari Otsu, (b) noise removal, (c) shadow/lighting normalization
-- [ ] Output model berupa file `.tflite` dengan ukuran ≤ 5 MB (agar APK tidak membengkak)
+- [x] Output model berupa file `.tflite` dengan ukuran ≤ 5 MB (Realita: `otso_docclean_v1.tflite` = 1.41 MB / 1,473,720 bytes)
 - [ ] Membuat script konversi (`training/scripts/convert_to_tflite.py`) dari SavedModel → TFLite dengan quantization
 - [ ] Membuat script evaluasi (`training/scripts/evaluate.py`) yang membandingkan akurasi model Otso vs heuristic saat ini vs raw ML Kit
 - [ ] Mendokumentasikan metrik evaluasi: Character Error Rate (CER), Word Error Rate (WER)
@@ -49,23 +51,23 @@ Target rilis: **v3.0.0** (Major Release)
 **Deskripsi:** Sebagai pengguna, saya ingin OCR menghasilkan teks yang lebih akurat secara otomatis tanpa harus mengubah pengaturan apa pun.
 
 **Kriteria Penerimaan:**
-- [ ] File `otso_vision_v2.tflite` ditempatkan di `app/src/main/assets/`
-- [ ] `NeuralVisionEngine.kt` memuat model saat aplikasi dimulai (`loadModel()` dipanggil dari `OtsoApplication` atau lazy-init saat pertama kali digunakan)
-- [ ] Fungsi `neuralBoost()` menggunakan TFLite Interpreter untuk preprocessing, bukan heuristic thresholding
-- [ ] Fallback ke heuristic jika model gagal dimuat (backward compatible)
+- [ ] File `otso_docclean_v1.tflite` ditempatkan di `app/src/main/assets/`
+- [ ] `NeuralVisionEngine.kt` memuat model saat aplikasi dimulai (`loadModel()` dipanggil dari `OtsoApplication`) dan dapat melaporkan status model
+- [ ] Fungsi `neuralBoost()` menggunakan TFLite Interpreter sebagai primary preprocessing path, bukan heuristic thresholding
+- [ ] Heuristic lama hanya boleh berjalan sebagai degraded mode jika model missing/failed, dan status kegagalan harus observable (`MODEL_MISSING`, `MODEL_FAILED`, bukan silent success)
 - [ ] Waktu inference model ≤ 200ms pada perangkat mid-range (Snapdragon 6-series)
 - [ ] Memory footprint tambahan model ≤ 10 MB saat loaded
 - [ ] Build berhasil (assembleDebug) dan OCR berfungsi pada device
 - [ ] Typecheck/lint lolos
 
 ### US-004: Dukungan Multi-Script Recognition
-**Deskripsi:** Sebagai pengguna yang menulis dalam bahasa non-Latin, saya ingin OCR dapat mengenali teks dalam bahasa Mandarin, Jepang, Korea, Hindi, dan Arabic.
+**Deskripsi:** Sebagai pengguna yang menulis dalam bahasa non-Latin, saya ingin OCR dapat mengenali teks dalam bahasa Mandarin, Jepang, Korea, dan Hindi/Devanagari.
 
 **Kriteria Penerimaan:**
-- [ ] Menambahkan ML Kit recognizer untuk Chinese/Japanese/Korean (`com.google.mlkit:text-recognition-chinese`, `com.google.mlkit:text-recognition-japanese`, `com.google.mlkit:text-recognition-korean`)
-- [ ] Menambahkan ML Kit recognizer untuk Devanagari (`com.google.mlkit:text-recognition-devanagari`)
-- [ ] `OcrEngine.kt` secara otomatis mendeteksi script dominan menggunakan `IntelligenceEngine.identifyLanguage()` lalu memilih recognizer yang sesuai
-- [ ] Jika deteksi gagal, fallback ke Latin recognizer (perilaku saat ini)
+- [x] Menambahkan ML Kit recognizer untuk Chinese/Japanese/Korean (`com.google.mlkit:text-recognition-chinese`, `com.google.mlkit:text-recognition-japanese`, `com.google.mlkit:text-recognition-korean`)
+- [x] Menambahkan ML Kit recognizer untuk Devanagari (`com.google.mlkit:text-recognition-devanagari`)
+- [ ] `OcrEngine.kt` secara otomatis mendeteksi script dominan menggunakan `IntelligenceEngine.identifyLanguage()` atau script detector khusus lalu memilih recognizer yang sesuai
+- [ ] Jika deteksi gagal, gunakan Latin recognizer sebagai degraded recognition path yang tercatat
 - [ ] Hybrid mode menjalankan kedua recognizer (Latin + detected script) dan memilih hasil terbaik berdasarkan `qualityScore()`
 - [ ] Build berhasil dan OCR berfungsi untuk teks Latin DAN non-Latin pada device
 - [ ] Typecheck/lint lolos
@@ -74,15 +76,15 @@ Target rilis: **v3.0.0** (Major Release)
 **Deskripsi:** Sebagai engineer, saya ingin aturan pembersihan semantik dapat diperbarui tanpa harus rebuild aplikasi, agar engine tetap bersih dan extensible.
 
 **Kriteria Penerimaan:**
-- [ ] Membuat file konfigurasi JSON: `app/src/main/assets/ocr_cleanup_rules.json`
-- [ ] Format konfigurasi: array of `{ "pattern": "<regex>", "replacement": "<string>", "category": "<string>" }`
-- [ ] `OcrEngine.kt` memuat rules dari JSON saat inisialisasi
-- [ ] Menghapus semua hardcoded brand-specific rules dari `cleanupSemanticNoise()`
-- [ ] Memigrasikan rules yang ada (Indomaret, digit-to-letter fixes) ke file JSON
-- [ ] Menambahkan kategori rules: `"digit_correction"`, `"brand_normalization"`, `"unit_correction"`
-- [ ] Rules diterapkan secara berurutan sesuai urutan di JSON
-- [ ] Build berhasil dan OCR cleanup berfungsi identik dengan sebelumnya pada device
-- [ ] Typecheck/lint lolos
+- [x] Membuat file konfigurasi JSON: `app/src/main/assets/ocr_cleanup_rules.json`
+- [x] Format konfigurasi: array of `{ "pattern": "<regex>", "replacement": "<string>", "category": "<string>" }`
+- [x] `OcrEngine.kt` memuat rules dari JSON saat inisialisasi
+- [x] Menghapus semua hardcoded brand-specific rules dari `cleanupSemanticNoise()`
+- [x] Memigrasikan rules yang ada (Indomaret, digit-to-letter fixes) ke file JSON
+- [x] Menambahkan kategori rules: `"digit_correction"`, `"brand_normalization"`, `"unit_correction"`
+- [x] Rules diterapkan secara berurutan sesuai urutan di JSON
+- [x] Build berhasil dan OCR cleanup berfungsi identik dengan sebelumnya pada device
+- [x] Typecheck/lint lolos
 
 ### US-006: Handwriting Recognition Support
 **Deskripsi:** Sebagai pengguna, saya ingin dapat memfoto catatan tulisan tangan dan mendapatkan hasil teks yang dapat diedit.
@@ -100,14 +102,15 @@ Target rilis: **v3.0.0** (Major Release)
 
 ## Persyaratan Fungsional
 
-- FR-1: Sistem harus memuat custom TFLite model (`otso_vision_v2.tflite`) dari assets saat aplikasi dimulai atau saat pertama kali OCR digunakan (lazy loading)
-- FR-2: Sistem harus melakukan fallback ke heuristic binarization jika model TFLite gagal dimuat
+- FR-1: Sistem harus memuat custom TFLite model (`otso_docclean_v1.tflite`) dari assets saat aplikasi dimulai atau saat pertama kali OCR digunakan (lazy loading)
+- FR-2: Sistem harus menjadikan model TFLite sebagai primary preprocessing path; heuristic binarization hanya digunakan sebagai degraded mode yang observable jika model tidak tersedia atau inference gagal
 - FR-3: Sistem harus secara otomatis mendeteksi script bahasa dan memilih ML Kit recognizer yang sesuai (Latin, Chinese, Japanese, Korean, Devanagari)
 - FR-4: Sistem harus memuat aturan semantic cleanup dari file JSON (`ocr_cleanup_rules.json`) di assets
-- FR-5: Sistem harus mengevaluasi kualitas hasil OCR menggunakan `qualityScore()` yang sudah ada dan memilih hasil terbaik dari semua pipeline
+- FR-5: Sistem harus mengevaluasi kualitas hasil OCR menggunakan `qualityScore()` yang sudah ada, tetapi hasil model-first tidak boleh diam-diam dianggap berhasil jika runtime model sedang degraded
 - FR-6: Waktu total OCR (preprocessing + recognition + cleanup) tidak boleh melebihi 3 detik untuk gambar beresolusi standar (12 MP) pada perangkat mid-range
 - FR-7: Ukuran total model TFLite tidak boleh melebihi 5 MB untuk menjaga ukuran APK tetap ringan (SOP Goal: LIGHTWEIGHT)
 - FR-8: Sistem harus menyertakan mode preprocessing khusus untuk handwriting yang menggunakan dilasi dan contrast boost agresif
+- FR-9: Sistem harus menyediakan status runtime Otso Vision (`MODEL_READY`, `MODEL_MISSING`, `MODEL_FAILED`, `DEGRADED_HEURISTIC`) untuk debugging dan audit kualitas
 
 ---
 
@@ -119,6 +122,8 @@ Target rilis: **v3.0.0** (Major Release)
 - **Tidak ada OCR untuk video** — Hanya frame gambar tunggal
 - **Tidak ada auto-correction grammar** — Engine hanya mengekstrak dan membersihkan noise, tidak memperbaiki tata bahasa
 - **Tidak ada model training di dalam aplikasi** — Training dilakukan offline di environment pengembangan
+- **Tidak ada klaim full in-house OCR recognizer di V2** — ML Kit tetap menjadi text recognition backend; Otso-owned model berfokus pada document cleanup/preprocessing
+- **Tidak ada Arabic offline recognition di V2** — Arabic ditunda sampai backend recognition yang stabil tersedia
 
 ---
 
@@ -136,9 +141,9 @@ implementation("com.google.mlkit:text-recognition-devanagari:16.0.1")
 ### Model Architecture (Rekomendasi)
 - **Base**: MobileNetV3-Small backbone untuk feature extraction
 - **Head**: Lightweight decoder (3-layer conv) untuk binary mask output
-- **Input**: 256×256 grayscale image
+- **Input**: 256×256 RGB image (`float32`, normalized 0..1)
 - **Output**: 256×256 binary mask (text vs background)
-- **Quantization**: INT8 post-training quantization untuk ukuran ≤ 5MB
+- **Quantization**: TFLite optimization untuk ukuran ≤ 5MB; INT8 full quantization menjadi target lanjutan jika latency/size membutuhkan
 - **Framework**: TensorFlow 2.x → TFLite converter
 
 ### Training Environment
@@ -149,7 +154,7 @@ implementation("com.google.mlkit:text-recognition-devanagari:16.0.1")
 ### APK Size Impact
 | Komponen | Estimasi Ukuran |
 |---|---|
-| `otso_vision_v2.tflite` | ≤ 5 MB |
+| `otso_docclean_v1.tflite` | 1.41 MB |
 | ML Kit Chinese recognizer | ~2 MB (on-demand download) |
 | ML Kit Japanese recognizer | ~2 MB (on-demand download) |
 | ML Kit Korean recognizer | ~2 MB (on-demand download) |
@@ -161,10 +166,10 @@ implementation("com.google.mlkit:text-recognition-devanagari:16.0.1")
 ### File yang Akan Dimodifikasi
 | File | Perubahan |
 |---|---|
-| `core/NeuralVisionEngine.kt` | Integrasi TFLite model, replace heuristic |
+| `core/NeuralVisionEngine.kt` | Integrasi TFLite model-first path dan observable degraded mode |
 | `core/OcrEngine.kt` | Multi-script routing, configurable cleanup |
 | `app/build.gradle.kts` | Tambah ML Kit script dependencies |
-| `assets/otso_vision_v2.tflite` | Model file baru |
+| `assets/otso_docclean_v1.tflite` | Model file baru |
 | `assets/ocr_cleanup_rules.json` | Konfigurasi cleanup baru |
 
 ### File Baru (Training Pipeline — gitignored)
@@ -186,6 +191,7 @@ implementation("com.google.mlkit:text-recognition-devanagari:16.0.1")
 - **Performa**: Total OCR time ≤ 3 detik pada Snapdragon 6-series
 - **Ukuran**: Model TFLite ≤ 5 MB, total APK size increase ≤ 8 MB
 - **Regresi**: Tidak ada penurunan kualitas untuk use case yang sudah ada (Latin printed text)
+- **Runtime State**: ≥ 95% OCR invocation pada build release harus melewati `MODEL_READY` path ketika asset model tersedia; degraded mode harus tercatat dan tidak boleh silent
 
 ---
 
@@ -194,7 +200,7 @@ implementation("com.google.mlkit:text-recognition-devanagari:16.0.1")
 1. **Dataset tulisan tangan**: Apakah fokus pada tulisan tangan Latin saja, atau termasuk tulisan tangan aksara non-Latin?
 2. **Model versioning**: Apakah perlu mekanisme untuk update model OTA (over-the-air) tanpa update APK?
 3. **Benchmark device**: Selain Snapdragon 6-series, apakah ada target perangkat minimum lainnya?
-4. **Arabic script**: ML Kit belum menyediakan recognizer untuk Arabic secara offline — apakah ini menjadi blocker atau bisa ditunda?
+4. **Arabic script**: ditunda dari V2 karena ML Kit offline recognizer belum tersedia untuk Arabic.
 
 ---
 
