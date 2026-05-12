@@ -1,10 +1,14 @@
 package com.otso.app
 
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import com.otso.app.ui.theme.GeneralSans
+import androidx.compose.ui.text.font.FontWeight
 
 object BrandAssets {
     val logoDark = R.drawable.ic_otso_dark
     val logoLight = R.drawable.ic_otso_light
-    val defaultFont: FontFamily get() = GeneralSans
+    val defaultFont = FontFamily(
+        Font(R.font.excon_light,   FontWeight.Light),
+        Font(R.font.excon_regular, FontWeight.Normal),
+    )
 }

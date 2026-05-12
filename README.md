@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>v2.2.0</strong>
+  <strong>v2.2.1</strong>
 </p>
 
 **Otso Note** is a product of the **Otso Department**, a division of **Technical Standard**. Driven by the mission to achieve **"The Renaissance of Software"** and uphold the culture of **"Tools for Tough,"** we focus on creating high-fidelity instruments for power users. 
@@ -58,9 +58,9 @@ Local execution of assembleRelease is disabled for security. Production builds a
 ---
 
 ## Release Channel
-Current release: **v2.2.0**
+Current release: **v2.2.1**
 Release assets:
-- `OtsoNote-v2.2.0-Release` (arm64-v8a optimized, via GitHub Actions Artifacts)
+- `OtsoNote-v2.2.1-Release` (arm64-v8a optimized, via GitHub Actions Artifacts)
 
 ---
 

@@ -8,8 +8,8 @@ The project runs two parallel environments that can be installed simultaneously 
 |---|---|---|
 | App ID | `com.otso.app` | `com.otso.app.dev` |
 | Display name | Otso | Kontio |
-| Launcher icon | White bear, blue gradient bg | Kontio icon, warm brown bg (`#826245`) |
-| Default font | General Sans (static OTF) | Excon Light + Regular (static OTF, 2 weights) |
+| Launcher icon | White bear, black bg (`#0E1117`) | White bear, warm brown bg (`#826245`) |
+| Default font | Excon Light + Regular (static OTF, 2 weights) | Excon Light + Regular (static OTF, 2 weights) |
 | Accent color | `#001AE2` (Blueprint Blue) | `#826245` (Kontio Brown) |
 | Version suffix | _(none)_ | `-dev` |
 | Build command | `./gradlew installRelease` | `./gradlew installDebug` |
