@@ -96,7 +96,7 @@ fun AboutScreen(
 
             // 4. Functional Footer (Muji Minimalist)
             Text(
-                text = "Technical Standard v2.2.0",
+                text = "Technical Standard v2.2.1",
                 style = otsoTypography.uiTechnical.copy(fontSize = 11.sp, letterSpacing = 0.02.em),
                 color = otsoColors.muted.copy(alpha = 0.3f),
                 modifier = Modifier.padding(bottom = 32.dp)

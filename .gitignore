@@ -24,6 +24,7 @@ replay_pid*
 
 # Screenshots & temp media (di luar res/)
 screenshot_*.png
+screencap*.png
 *.tmp
 
 # Internal OCR training datasets (otso-labs only)
@@ -32,16 +33,22 @@ app/src/androidTest/assets/ocrTesting/
 
 # Agent workspace
 .agent/
+.agents/
 .android-user-home/
 .claude/
+.gemini/
 
 # Session / AI-generated documents (never committed)
+*.md
+*.markdown
+!README.md
 HANDOVER_*.md
 ENV_SEPARATION.md
 GOOGLE_DESIGN_AWARDS_CRITERIA.md
 technicalAgents.md
 projectContexts/
 session_device.json
+skills-lock.json
 ANTIGRAVITY_AGENT_OTSO_NOTE_SOP.md
 Otso Note Standard Operational Protocol.txt
 
@@ -53,6 +60,9 @@ tmp_*.txt
 gradleLocal/
 .vscode/
 reports/
+
+# Local-only source assets; Android runtime assets live under app/src/*/res
+OtsoAssets_New/
 
 # Security Credentials
 *.jks
