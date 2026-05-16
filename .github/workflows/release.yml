@@ -1,6 +1,9 @@
 name: Build & Release v2.2.1
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:

@@ -64,6 +64,9 @@ reports/
 # Local-only source assets; Android runtime assets live under app/src/*/res
 OtsoAssets_New/
 
+# Local model exports; runtime models must live under app/src/main/assets
+/*.tflite
+
 # Security Credentials
 *.jks
 *.keystore
