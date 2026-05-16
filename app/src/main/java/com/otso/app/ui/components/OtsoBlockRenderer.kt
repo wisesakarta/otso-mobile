@@ -5,11 +5,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.sp
 import com.otso.app.model.BlockType
 import com.otso.app.model.ContentBlock
 import com.otso.app.ui.mapper.toAnnotatedString
-import com.otso.app.ui.theme.JetBrainsMono
 import com.otso.app.ui.theme.OtsoTypography
 import com.otso.app.ui.theme.otsoColors
 
@@ -37,7 +37,7 @@ fun OtsoBlockRenderer(block: ContentBlock) {
         BlockType.Paragraph -> OtsoTypography.editorBody
         BlockType.BulletList -> OtsoTypography.editorBody
         BlockType.CodeBlock -> OtsoTypography.editorBody.copy(
-            fontFamily = JetBrainsMono,
+            fontFamily = FontFamily.Monospace,
         )
     }
 

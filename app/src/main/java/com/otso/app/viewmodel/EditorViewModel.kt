@@ -68,7 +68,6 @@ data class FontState(
     val activeFoundryFamily: FontFamily? = null,
     val activeFoundryVariantCount: Int = 0,
     val editorFontSize: Int = 15,
-    val isMonospace: Boolean = false,
 )
 
 sealed interface EditorEvent {
@@ -190,7 +189,6 @@ class EditorViewModel(
                             editorFontSize = preferredFontSizeSp,
                             activeFoundryFamily = current.font.activeFoundryFamily,
                             activeFoundryVariantCount = current.font.activeFoundryVariantCount,
-                            isMonospace = current.font.isMonospace,
                         ),
                         customFontPath = initialFontPath,
                         customFontName = initialFontName,
@@ -216,7 +214,6 @@ class EditorViewModel(
                             editorFontSize = preferredFontSizeSp,
                             activeFoundryFamily = current.font.activeFoundryFamily,
                             activeFoundryVariantCount = current.font.activeFoundryVariantCount,
-                            isMonospace = current.font.isMonospace,
                         ),
                         customFontPath = initialFontPath,
                         customFontName = initialFontName,
@@ -429,15 +426,6 @@ class EditorViewModel(
                 // DNA: Intelligence Layer (Auto-formatting & Entity Extraction)
                 val textToInsert = withContext(Dispatchers.Default) {
                     IntelligenceEngine.extractAndFormat(getApplication(), rawText)
-                }
-
-                _uiState.update { state -> 
-                    // Auto-enable monospace if text looks structured (many spaces in rows)
-                    val isStructured = textToInsert.lines().any { it.count { c -> c == ' ' } > 3 }
-                    state.copy(
-                        font = state.font.copy(isMonospace = state.font.isMonospace || isStructured),
-                        ocrEngineLabel = "$lastEngine + Intel"
-                    )
                 }
 
                 _editorEvents.emit(EditorEvent.InsertTextAtSelection(textToInsert))
@@ -762,14 +750,6 @@ class EditorViewModel(
         val current = _uiState.value
         if (current.findReplace.findQuery.isNotBlank()) {
             updateFindQuery(current.findReplace.findQuery)
-        }
-    }
-
-    fun toggleMonospace() {
-        _uiState.update {
-            it.copy(
-                font = it.font.copy(isMonospace = !it.font.isMonospace),
-            )
         }
     }
 

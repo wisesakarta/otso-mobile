@@ -63,7 +63,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.otso.app.model.ContentBlock
 import com.otso.app.ui.mapper.toAnnotatedString
-import com.otso.app.ui.theme.GeneralSans
 import com.otso.app.ui.theme.OtsoColorScheme
 import com.otso.app.ui.theme.OtsoSpacing
 import com.otso.app.ui.theme.OtsoTypography

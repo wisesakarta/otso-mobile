@@ -498,14 +498,10 @@ fun EditorScreen(
                 }
             }
 
-            val customFontFamily = if (uiState.font.isMonospace) {
-                com.otso.app.ui.theme.JetBrainsMono
-            } else {
-                rememberDynamicFontFamily(
-                    path = uiState.customFontPath,
-                    foundryFamily = uiState.font.activeFoundryFamily,
-                )
-            }
+            val customFontFamily = rememberDynamicFontFamily(
+                path = uiState.customFontPath,
+                foundryFamily = uiState.font.activeFoundryFamily,
+            )
             val allowSynthesisForEditor =
                 uiState.font.activeFoundryFamily == null || uiState.font.activeFoundryVariantCount <= 1
             Box(
@@ -614,8 +610,6 @@ fun EditorScreen(
                         },
                         onFindClick = { viewModel.toggleFind() },
                         onScanClick = { launchDocumentScanner() },
-                        onMonospaceToggle = { viewModel.toggleMonospace() },
-                        isMonospaceActive = uiState.font.isMonospace,
                         onUndo = { activeRichTextState?.undo() },
                         onRedo = { activeRichTextState?.redo() },
                         canUndo = activeRichTextState?.canUndo ?: false,

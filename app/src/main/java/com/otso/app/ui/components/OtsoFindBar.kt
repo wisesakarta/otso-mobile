@@ -1,4 +1,8 @@
 package com.otso.app.ui.components
+/**
+ * OtsoFindBar — High-fidelity Find/Replace instrument.
+ * Implements progressive disclosure for replace controls and premium haptic feedback.
+ */
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

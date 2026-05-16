@@ -71,9 +71,9 @@ object OtsoColors {
     val LightSurface     = Color(0xFFF2F4F4)
     val LightShadow      = Color(0x1A2A3A5A) // soft navy-tinted gray
 
-    val Accent              = Color(0xFF826245)
-    val AccentMuted         = Color(0x2E826245)
-    val SelectionBackground = Color(0x73826245)
+    val Accent              = Color(0xFFEFDCAC)
+    val AccentMuted         = Color(0x2EEFDCAC)
+    val SelectionBackground = Color(0x73EFDCAC)
     val Black            = Color(0xFF000000)
     val Transparent      = Color(0x00000000)
     val DarkShadow       = Color(0xFF000000) // deep midnight-black
@@ -122,16 +122,11 @@ val androidx.compose.material3.ColorScheme.otsoColors: OtsoColorScheme
 // Typography
 // ─────────────────────────────────────────────
 
-val GeneralSans = FontFamily(
-    Font(R.font.general_sans_regular,  FontWeight.Normal,   FontStyle.Normal),
-    Font(R.font.general_sans_medium,   FontWeight.Medium,   FontStyle.Normal),
-    Font(R.font.general_sans_semibold, FontWeight.SemiBold, FontStyle.Normal),
-    Font(R.font.general_sans_bold,     FontWeight.Bold,     FontStyle.Normal),
-    Font(R.font.general_sans_light,    FontWeight.Light,    FontStyle.Normal),
-)
-
-val JetBrainsMono = FontFamily(
-    Font(R.font.jetbrains_mono_regular, FontWeight.Normal, FontStyle.Normal),
+val IAWriterQuattro = FontFamily(
+    Font(R.font.ia_writer_quattro_s_regular, FontWeight.Normal, FontStyle.Normal),
+    Font(R.font.ia_writer_quattro_s_italic, FontWeight.Normal, FontStyle.Italic),
+    Font(R.font.ia_writer_quattro_s_bold, FontWeight.Bold, FontStyle.Normal),
+    Font(R.font.ia_writer_quattro_s_bold_italic, FontWeight.Bold, FontStyle.Italic),
 )
 
 data class OtsoTypographyTokens(
@@ -512,17 +507,17 @@ fun rememberDynamicFontFamily(
 ): FontFamily {
     return remember(path, foundryFamily) {
         if (foundryFamily != null) return@remember foundryFamily
-        if (path == null) return@remember GeneralSans
+        if (path == null) return@remember IAWriterQuattro
         
         try {
             val file = File(path)
-            if (!file.exists()) return@remember GeneralSans
+            if (!file.exists()) return@remember IAWriterQuattro
             
             val androidTypeface = AndroidTypeface.createFromFile(file)
             FontFamily(androidTypeface)
         } catch (e: Exception) {
           // Exception shielding: fail silently to default editor family.
-            GeneralSans
+            IAWriterQuattro
         }
     }
 }

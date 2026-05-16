@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
  */
 object OtsoIcons {
     private const val STROKE_WEIGHT = 16f
+    private const val THIN_STROKE = 1.5f
 
     val X = buildIcon("X") {
         path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
@@ -292,26 +293,26 @@ object OtsoIcons {
         }
     }
 
-    val Highlighter = buildIcon("Highlighter") {
-        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
-            // Phosphor Highlighter (Regular) — pen body with angled tip
-            moveTo(92.69f, 216f)
-            horizontalLineTo(163.31f)
-            moveTo(128f, 216f)
-            verticalLineTo(176f)
-            moveTo(164f, 80f)
-            lineTo(192f, 108f)
-            lineTo(136f, 176f)
-            horizontalLineTo(120f)
-            lineTo(80f, 148f)
-            verticalLineTo(132f)
+    val Highlighter = buildIcon("Highlighter", viewport = 24f) {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = 2f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(8f, 21f)
+            lineTo(9f, 14f)
+            horizontalLineTo(15f)
+            lineTo(16f, 21f)
+
+            moveTo(11.6154f, 8.34613f)
+            lineTo(10f, 14f)
+            horizontalLineTo(14f)
+            lineTo(12.3846f, 8.34613f)
+            curveTo(12.2741f, 7.95932f, 11.7259f, 7.95932f, 11.6154f, 8.34613f)
             close()
-            moveTo(164f, 80f)
-            lineTo(180f, 52f)
-            arcTo(8f, 8f, 0f, false, true, 192f, 52f)
-            lineTo(204f, 64f)
-            arcTo(8f, 8f, 0f, false, true, 204f, 76f)
-            lineTo(192f, 108f)
+
+            moveTo(22f, 12f)
+            curveTo(22f, 17.5228f, 17.5228f, 22f, 12f, 22f)
+            curveTo(6.47715f, 22f, 2f, 17.5228f, 2f, 12f)
+            curveTo(2f, 6.47715f, 6.47715f, 2f, 12f, 2f)
+            curveTo(17.5228f, 2f, 22f, 6.47715f, 22f, 12f)
+            close()
         }
     }
 
@@ -328,17 +329,6 @@ object OtsoIcons {
             lineTo(220.1f, 45.7f)
             arcTo(8.1f, 8.1f, 0f, false, false, 210.3f, 35.9f)
             close()
-        }
-    }
-
-    val LetterM = buildIcon("LetterM") {
-        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
-            // Clean monospace "M" letterform without enclosing circle — better legibility at 20dp
-            moveTo(72f, 192f)
-            verticalLineTo(64f)
-            lineTo(128f, 144f)
-            lineTo(184f, 64f)
-            verticalLineTo(192f)
         }
     }
 
@@ -490,32 +480,25 @@ object OtsoIcons {
         }
     }
 
-    val FolderCounterClockwise = buildIcon("FolderCounterClockwise") {
-        // Folder body (identical to Folder icon)
-        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
-            moveTo(216.89f, 208f)
-            horizontalLineTo(39.38f)
-            arcTo(7.4f, 7.4f, 0f, false, true, 32f, 200.62f)
-            verticalLineTo(80f)
-            horizontalLineTo(216f)
-            arcTo(8f, 8f, 0f, false, true, 224f, 88f)
-            verticalLineTo(200.89f)
-            arcTo(7.11f, 7.11f, 0f, false, true, 216.89f, 208f)
-            close()
-            moveTo(32f, 80f)
-            verticalLineTo(56f)
-            arcTo(8f, 8f, 0f, false, true, 40f, 48f)
-            horizontalLineTo(92.69f)
-            arcTo(8f, 8f, 0f, false, true, 98.34f, 50.34f)
-            lineTo(128f, 80f)
+    val FolderCounterClockwise = buildIcon("FolderCounterClockwise", viewport = 24f) {
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = THIN_STROKE, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(3.46875f, 18.3744f)
+            lineTo(4.53321f, 16.0325f)
+            moveTo(14.1134f, 18.3744f)
+            lineTo(13.0489f, 16.0325f)
+            moveTo(13.0489f, 16.0325f)
+            lineTo(8.79105f, 6.66528f)
+            lineTo(4.53321f, 16.0325f)
+            horizontalLineTo(13.0489f)
         }
-        // CCW circular arrow — center (184,164) r=28, 270° CCW arc east→south, arrowhead at south pointing east
-        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE_WEIGHT, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
-            moveTo(212f, 164f)
-            arcTo(28f, 28f, 0f, true, false, 184f, 192f)
-            lineTo(176f, 184f)
-            moveTo(184f, 192f)
-            lineTo(176f, 200f)
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = THIN_STROKE, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(15.1777f, 8.79421f)
+            curveTo(15.1777f, 5.06857f, 21.0323f, 5.0686f, 21.0323f, 8.79421f)
+            curveTo(21.0323f, 11.4554f, 18.3711f, 10.9231f, 18.3711f, 14.1164f)
+        }
+        path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = THIN_STROKE, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(18.3711f, 18.385f)
+            lineTo(18.3817f, 18.3732f)
         }
     }
 
@@ -609,13 +592,14 @@ object OtsoIcons {
 
     private fun buildIcon(
         name: String,
+        viewport: Float = 256f,
         block: ImageVector.Builder.() -> ImageVector.Builder
     ): ImageVector = ImageVector.Builder(
         name = name,
         defaultWidth = 24.dp,
         defaultHeight = 24.dp,
-        viewportWidth = 256f,
-        viewportHeight = 256f
+        viewportWidth = viewport,
+        viewportHeight = viewport
     ).block().build()
 }
 

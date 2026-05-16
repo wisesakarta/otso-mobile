@@ -67,22 +67,14 @@ fun AboutScreen(
         ) {
             Spacer(modifier = Modifier.weight(0.15f))
 
-            // 2. Hero (Sharp Squircle - The Identity)
+            // 2. Hero (Icon-only identity, no container background)
             StaggeredItem(index = 0) {
                 val logoRes = if (otsoColors.isDarkMode) com.otso.app.BrandAssets.logoDark else com.otso.app.BrandAssets.logoLight
-                Box(
-                    modifier = Modifier
-                        .size(160.dp)
-                        .clip(com.otso.app.ui.theme.SquircleShape(12.dp))
-                        .background(if (otsoColors.isDarkMode) otsoColors.surface else otsoColors.edge.copy(alpha = 0.4f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = logoRes),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(0.7f)
-                    )
-                }
+                Image(
+                    painter = painterResource(id = logoRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(172.dp)
+                )
             }
 
             Spacer(modifier = Modifier.height(64.dp))

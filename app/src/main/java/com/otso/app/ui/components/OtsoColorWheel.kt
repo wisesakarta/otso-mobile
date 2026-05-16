@@ -53,7 +53,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.otso.app.ui.theme.JetBrainsMono
 import com.otso.app.ui.theme.OtsoMotion
 import com.otso.app.ui.theme.OtsoTypography
 import com.otso.app.ui.theme.SquircleShape
@@ -197,7 +196,7 @@ fun OtsoColorWheelDialog(
                                 }
                             },
                             textStyle = OtsoTypography.uiTechnical.copy(
-                                fontFamily = JetBrainsMono,
+                                fontFamily = com.otso.app.BrandAssets.defaultFont,
                                 fontWeight = FontWeight.Medium,
                                 fontSize = 14.sp,
                                 color = colors.ink,
@@ -214,7 +213,7 @@ fun OtsoColorWheelDialog(
                             Text(
                                 text = "RRGGBB",
                                 style = OtsoTypography.uiTechnical.copy(
-                                    fontFamily = JetBrainsMono,
+                                    fontFamily = com.otso.app.BrandAssets.defaultFont,
                                     color = colors.muted.copy(alpha = 0.6f),
                                 ),
                             )

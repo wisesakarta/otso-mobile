@@ -41,8 +41,6 @@ fun OtsoKeyboardToolbar(
     onKeyInsert: (String) -> Unit,
     onFindClick: () -> Unit,
     onScanClick: () -> Unit,
-    onMonospaceToggle: () -> Unit,
-    isMonospaceActive: Boolean = false,
     onUndo: () -> Unit = {},
     onRedo: () -> Unit = {},
     canUndo: Boolean = false,
@@ -134,24 +132,8 @@ fun OtsoKeyboardToolbar(
                         )
                     }
 
-                    // Monospace toggle
-                    StaggeredItem(index = 3) {
-                        ToolbarButton(
-                            icon = OtsoIcons.LetterM,
-                            contentDescription = if (isMonospaceActive) "Disable Monospace Font" else "Enable Monospace Font",
-                            isActive = isMonospaceActive,
-                            accent = accent,
-                            colors = colors,
-                            modifier = Modifier.offset(y = (-0.2).dp),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onMonospaceToggle()
-                            },
-                        )
-                    }
-
                     // Select All
-                    StaggeredItem(index = 4) {
+                    StaggeredItem(index = 3) {
                         ToolbarButton(
                             icon = OtsoIcons.SelectAll,
                             contentDescription = "Select All",
@@ -181,7 +163,7 @@ fun OtsoKeyboardToolbar(
                     )
 
                     insertKeys.forEachIndexed { index, (icon, insert) ->
-                        StaggeredItem(index = index + 6) {
+                        StaggeredItem(index = index + 5) {
                             ToolbarButton(
                                 icon = icon,
                                 contentDescription = "Insert control",
@@ -200,7 +182,7 @@ fun OtsoKeyboardToolbar(
             ToolbarDivider(colors)
 
             // FIXED END: Find — Accent pill
-            StaggeredItem(index = 12) { // Delayed entry for the final action
+            StaggeredItem(index = 11) { // Delayed entry for the final action
                 Box(
                     modifier = Modifier
                         .padding(end = 4.dp, start = 4.dp)
@@ -223,7 +205,7 @@ fun OtsoKeyboardToolbar(
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium
                         ),
-                        color = Color.White,
+                        color = colors.ink,
                         textAlign = TextAlign.Center,
                         maxLines = 1,
                     )
